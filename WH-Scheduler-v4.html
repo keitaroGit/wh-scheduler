@@ -258,7 +258,7 @@ table.tt input:focus,table.tt select:focus{outline:none;border-color:var(--blue)
       </div>
     </div>
     <div style="font-size:12px;color:var(--ink2);line-height:1.7;padding:11px 13px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border)">
-      <strong>Gemini API key</strong> is embedded in this file. Open in a text editor and replace <code>AIzaSyC1hm6D2pi7kKKwD7d_OMASNdY58FTmq1c</code> to update it.
+      <strong>Gemini API key</strong> is embedded in this file. Open in a text editor and replace <code>YOUR_GEMINI_KEY_HERE</code> to update it.
     </div>
   </div>
 </div>
@@ -341,21 +341,7 @@ table.tt input:focus,table.tt select:focus{outline:none;border-color:var(--blue)
       <div class="fg c4"><div class="field"><label>Date <span class="req">*</span></label><input type="date" id="d-date"></div><div class="field"><label>Ref #</label><input type="text" id="d-ref" placeholder="REF-001"></div><div class="field"><label>Delivery Time</label><input type="text" id="d-time" placeholder="HH:MM" maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)" style="font-family:var(--mono)"></div><div class="field"><label>Qty</label><input type="text" id="d-qty" placeholder="10cs / 2plt"></div></div>
       <div class="fg c3"><div class="field"><label>Deliver To <span class="req">*</span></label><input type="text" id="d-to" placeholder="LAX / Long Beach Port"></div><div class="field"><label>Client</label><input type="text" id="d-client" placeholder="Client name"></div><div class="field"><label>Commodity</label><input type="text" id="d-comm" placeholder="Commodity"></div></div>
       <div class="fg c2"><div class="field"><label>Details</label><input type="text" id="d-details" placeholder="Additional details..."></div><div class="field"><label>Note</label><input type="text" id="d-note" placeholder="Special instructions..."></div></div>
-      <div class="field" style="margin-top:4px">
-        <label>Attached Document <span style="font-weight:400;color:var(--ink3)">(receipt, packing list, etc. — optional)</span></label>
-        <label for="d-file-inp" id="d-drop-zone" style="border:2px dashed var(--border2);border-radius:var(--r-lg);padding:16px;text-align:center;background:var(--surface2);cursor:pointer;display:block;transition:all .15s" ondragover="event.preventDefault();this.style.borderColor='var(--blue)';this.style.background='var(--blue-lt)'" ondragleave="this.style.borderColor='';this.style.background='var(--surface2)'" ondrop="handleDocDrop(event,'d')">
-          <input type="file" id="d-file-inp" accept="application/pdf,image/*" style="display:none" onchange="handleDocFile(this.files[0],'d')">
-          <div style="font-size:18px;margin-bottom:4px;opacity:.4">📎</div>
-          <div style="font-size:12px;font-weight:500;color:var(--ink)">Drop file or click to upload</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:3px">PDF or image &nbsp;·&nbsp; <kbd style="background:var(--surface);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-size:10px">Ctrl+V</kbd> to paste</div>
-        </label>
-        <div id="d-doc-preview" style="display:none;margin-top:8px;padding:9px 12px;background:var(--green-lt);border:1px solid #9FE1CB;border-radius:var(--r);align-items:center;gap:10px">
-          <span style="font-size:18px" id="d-doc-icon">📄</span>
-          <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:12px;color:var(--green-dk)" id="d-doc-name"></div><div style="font-size:11px;color:var(--green-dk);opacity:.8" id="d-doc-size"></div></div>
-          <button class="btn xs" onclick="clearDoc('d')" style="flex-shrink:0">Remove</button>
-        </div>
-        <div id="d-img-preview" style="display:none;margin-top:6px"><img id="d-img-el" style="max-width:100%;max-height:180px;border-radius:var(--r);border:1px solid var(--border)"></div>
-      </div>
+
       <div class="sub-bar"><div class="sp"></div><button class="btn" onclick="resetForm('delivery')">Reset</button><button class="btn prim" onclick="submitSingle('delivery')">Submit →</button></div>
     </div>
   </div>
@@ -367,21 +353,7 @@ table.tt input:focus,table.tt select:focus{outline:none;border-color:var(--blue)
       <div class="fg c4"><div class="field"><label>Date <span class="req">*</span></label><input type="date" id="pu-date"></div><div class="field"><label>Ref # / AWB #</label><input type="text" id="pu-ref" placeholder="REF / AWB"></div><div class="field"><label>Pick Up Time</label><input type="text" id="pu-time" placeholder="HH:MM" maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)" style="font-family:var(--mono)"></div><div class="field"><label>Qty</label><input type="text" id="pu-qty" placeholder="10cs / 2plt"></div></div>
       <div class="fg c3"><div class="field"><label>Pick Up From <span class="req">*</span></label><input type="text" id="pu-from" placeholder="Location / Address"></div><div class="field"><label>Deliver To</label><input type="text" id="pu-dest" placeholder="Destination"></div><div class="field"><label>Commodity</label><input type="text" id="pu-comm" placeholder="Commodity"></div></div>
       <div class="fg c2"><div class="field"><label>Client</label><input type="text" id="pu-client" placeholder="Client"></div><div class="field"><label>Note</label><input type="text" id="pu-note" placeholder="Note..."></div></div>
-      <div class="field" style="margin-top:4px">
-        <label>Attached Document <span style="font-weight:400;color:var(--ink3)">(receipt, BOL, etc. — optional)</span></label>
-        <label for="pu-file-inp" id="pu-drop-zone" style="border:2px dashed var(--border2);border-radius:var(--r-lg);padding:16px;text-align:center;background:var(--surface2);cursor:pointer;display:block;transition:all .15s" ondragover="event.preventDefault();this.style.borderColor='var(--blue)';this.style.background='var(--blue-lt)'" ondragleave="this.style.borderColor='';this.style.background='var(--surface2)'" ondrop="handleDocDrop(event,'pu')">
-          <input type="file" id="pu-file-inp" accept="application/pdf,image/*" style="display:none" onchange="handleDocFile(this.files[0],'pu')">
-          <div style="font-size:18px;margin-bottom:4px;opacity:.4">📎</div>
-          <div style="font-size:12px;font-weight:500;color:var(--ink)">Drop file or click to upload</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:3px">PDF or image &nbsp;·&nbsp; <kbd style="background:var(--surface);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-size:10px">Ctrl+V</kbd> to paste</div>
-        </label>
-        <div id="pu-doc-preview" style="display:none;margin-top:8px;padding:9px 12px;background:var(--green-lt);border:1px solid #9FE1CB;border-radius:var(--r);align-items:center;gap:10px">
-          <span style="font-size:18px" id="pu-doc-icon">📄</span>
-          <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:12px;color:var(--green-dk)" id="pu-doc-name"></div><div style="font-size:11px;color:var(--green-dk);opacity:.8" id="pu-doc-size"></div></div>
-          <button class="btn xs" onclick="clearDoc('pu')" style="flex-shrink:0">Remove</button>
-        </div>
-        <div id="pu-img-preview" style="display:none;margin-top:6px"><img id="pu-img-el" style="max-width:100%;max-height:180px;border-radius:var(--r);border:1px solid var(--border)"></div>
-      </div>
+
       <div class="sub-bar"><div class="sp"></div><button class="btn" onclick="resetForm('pickup')">Reset</button><button class="btn prim" onclick="submitSingle('pickup')">Submit →</button></div>
     </div>
   </div>
@@ -404,27 +376,7 @@ table.tt input:focus,table.tt select:focus{outline:none;border-color:var(--blue)
       <div class="fg c4"><div class="field"><label>Date <span class="req">*</span></label><input type="date" id="rl-date"></div><div class="field"><label>Ref #</label><input type="text" id="rl-ref" placeholder="REF-001"></div><div class="field"><label>Carrier</label><input type="text" id="rl-carrier" placeholder="Carrier"></div><div class="field"><label>Client Name</label><input type="text" id="rl-client" placeholder="Client"></div></div>
       <div class="fg c4"><div class="field"><label>Consignee</label><input type="text" id="rl-consignee" placeholder="Consignee"></div><div class="field"><label>Qty</label><input type="text" id="rl-qty" placeholder="10cs / 2plt"></div><div class="field"><label>Commodity</label><input type="text" id="rl-comm" placeholder="Commodity"></div><div class="field"><label>Note</label><input type="text" id="rl-note" placeholder="Note..."></div></div>
 
-      <!-- Release document upload -->
-      <div style="margin-top:4px">
-        <div class="field" style="margin-bottom:8px">
-          <label>Release Document <span style="font-weight:400;color:var(--ink3)">(PDF or image — upload or paste)</span></label>
-          <label for="rl-file-inp" id="rl-drop-zone" style="border:2px dashed var(--border2);border-radius:var(--r-lg);padding:20px 16px;text-align:center;background:var(--surface2);cursor:pointer;display:block;transition:all .15s" ondragover="event.preventDefault();this.style.borderColor='var(--blue)';this.style.background='var(--blue-lt)'" ondragleave="this.style.borderColor='';this.style.background='var(--surface2)'" ondrop="handleDocDrop(event,'rl')">
-            <input type="file" id="rl-file-inp" accept="application/pdf,image/*" style="display:none" onchange="handleDocFile(this.files[0],'rl')">
-            <div style="font-size:22px;margin-bottom:6px;opacity:.4">📎</div>
-            <div style="font-size:13px;font-weight:500;color:var(--ink)">Drop file here or click to upload</div>
-            <div style="font-size:11px;color:var(--ink3);margin-top:4px">PDF or image &nbsp;·&nbsp; Or press <kbd style="background:var(--surface);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-size:10px">Ctrl+V</kbd> to paste a screenshot</div>
-          </label>
-          <div id="rl-doc-preview" style="display:none;margin-top:10px;padding:10px 12px;background:var(--green-lt);border:1px solid #9FE1CB;border-radius:var(--r);align-items:center;gap:10px">
-            <span style="font-size:20px" id="rl-doc-icon">📄</span>
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:600;font-size:12px;color:var(--green-dk)" id="rl-doc-name">Document ready</div>
-              <div style="font-size:11px;color:var(--green-dk);opacity:.8" id="rl-doc-size"></div>
-            </div>
-            <button class="btn xs" onclick="clearDoc('rl')" style="flex-shrink:0">Remove</button>
-          </div>
-          <div id="rl-img-preview" style="display:none;margin-top:8px"><img id="rl-img-el" style="max-width:100%;max-height:200px;border-radius:var(--r);border:1px solid var(--border)"></div>
-        </div>
-      </div>
+
 
       <div class="sub-bar">
         <button class="btn" style="background:var(--purple-lt);color:var(--purple);border-color:var(--purple)" onclick="generateReleaseLetter()">📄 Generate Release Letter</button>
@@ -524,7 +476,7 @@ table.tt input:focus,table.tt select:focus{outline:none;border-color:var(--blue)
 
 <script>
 // ─── Config ───────────────────────────────────────────────────────
-const GEMINI_KEY = 'AIzaSyC1hm6D2pi7kKKwD7d_OMASNdY58FTmq1c';
+const GEMINI_KEY = 'YOUR_GEMINI_KEY_HERE';
 const TODAY = new Date().toISOString().slice(0,10);
 
 // ─── Apps Script (GAS) ────────────────────────────────────────────
