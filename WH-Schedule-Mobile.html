@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>WH Schedule — Mobile</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F2F0EA;--surface:#FFF;--surface2:#ECEAE3;--border:#D4D0C4;
+  --ink:#1A1916;--ink2:#5C5A54;--ink3:#9C9A94;
+  --blue:#1255A4;--blue-lt:#E4EDF8;--blue-dk:#0B3D7A;
+  --green:#0A6644;--green-lt:#E0F2EB;--green-dk:#074D33;
+  --amber:#8A5200;--amber-lt:#FDF0D8;
+  --red:#9B1C1C;--red-lt:#FEE8E8;
+  --purple:#5B3FA6;--purple-lt:#EEE8FF;
+  --teal:#0D6E8A;--teal-lt:#E0F4F8;
+  --r:8px;
+  --mono:'SF Mono','Courier New',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:14px;min-height:100vh;padding-bottom:80px}
+
+/* Header */
+.hdr{background:var(--ink);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:100}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.hdr-logo{font-size:13px;font-weight:600;letter-spacing:.06em;display:flex;align-items:center;gap:7px}
+.hdr-mark{width:20px;height:20px;border:1.5px solid rgba(255,255,255,.3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px}
+.hdr-refresh{padding:5px 12px;font-size:12px;font-weight:500;border-radius:20px;border:1px solid rgba(255,255,255,.3);background:none;color:#fff;cursor:pointer;font-family:var(--sans)}
+.hdr-refresh:active{background:rgba(255,255,255,.15)}
+
+/* Date nav */
+.date-nav{display:flex;align-items:center;gap:8px}
+.date-nav button{padding:4px 10px;font-size:12px;border-radius:4px;border:1px solid rgba(255,255,255,.25);background:none;color:#fff;cursor:pointer;font-family:var(--sans)}
+.date-nav button:active{background:rgba(255,255,255,.15)}
+.date-lbl{flex:1;text-align:center;font-size:13px;font-weight:600}
+
+/* Status */
+.sbar{padding:7px 16px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:6px}
+.sbar.ok{background:var(--green-lt);color:var(--green-dk)}
+.sbar.warn{background:var(--amber-lt);color:var(--amber)}
+.sbar.err{background:var(--red-lt);color:var(--red)}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sbar.ok .sdot{background:var(--green)}.sbar.warn .sdot{background:var(--amber)}.sbar.err .sdot{background:var(--red)}
+
+/* Filters */
+.filters{display:flex;gap:6px;padding:10px 14px;overflow-x:auto;background:var(--surface);border-bottom:1px solid var(--border)}
+.filters::-webkit-scrollbar{display:none}
+.fpill{padding:5px 12px;font-size:12px;font-weight:500;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--ink2);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.fpill.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* Stats bar */
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--border)}
+.stat{background:var(--surface);padding:8px 4px;text-align:center;border-right:1px solid var(--border)}
+.stat:last-child{border-right:none}
+.stat-n{font-size:18px;font-weight:700;font-family:var(--mono)}
+.stat-l{font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);margin-top:1px}
+
+/* Main */
+.main{padding:12px 14px}
+
+/* Time block */
+.tblock{margin-bottom:18px}
+.thead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.tbadge{font-size:11px;font-weight:700;padding:4px 11px;border-radius:20px;letter-spacing:.03em;font-family:var(--mono)}
+.tb-early{background:var(--green-lt);color:var(--green-dk)}
+.tb-am{background:var(--blue-lt);color:var(--blue-dk)}
+.tb-noon{background:var(--amber-lt);color:var(--amber)}
+.tb-pm{background:var(--purple-lt);color:var(--purple)}
+.tb-eve{background:var(--red-lt);color:var(--red)}
+.tline{flex:1;height:1px;background:var(--border)}
+.tcnt{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+
+/* Destination group */
+.dest-grp{margin-bottom:10px}
+.dest-lbl{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;background:var(--blue-lt);color:var(--blue-dk);border-radius:4px;margin-bottom:6px;font-family:var(--mono)}
+
+/* Job card */
+.jcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;margin-bottom:6px;active:background:var(--surface2)}
+.jcard.dispatch{border-left:4px solid var(--blue);border-radius:0 var(--r) var(--r) 0}
+.jcard.whouse{border-left:4px solid var(--green);border-radius:0 var(--r) var(--r) 0}
+.jcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.jcard-badges{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+.jcard-time{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--ink);white-space:nowrap}
+.jcard-body{display:flex;flex-direction:column;gap:3px}
+.jcard-main{font-size:14px;font-weight:500;color:var(--ink)}
+.jcard-sub{font-size:12px;color:var(--ink2);display:flex;gap:10px;flex-wrap:wrap}
+.jcard-detail{font-size:11px;color:var(--ink3);margin-top:2px}
+.jcard-note{font-size:12px;color:var(--ink2);font-style:italic;margin-top:4px;padding-top:4px;border-top:1px solid var(--border)}
+.jcard-doc{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:4px 10px;background:var(--green-lt);color:var(--green-dk);border-radius:4px;border:none;cursor:pointer;margin-top:5px;width:100%;justify-content:center}
+.jcard-doc:active{background:#C0EAD8}
+
+/* Pill */
+.pill{font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.p-tender{background:var(--blue-lt);color:var(--blue-dk)}
+.p-delivery{background:var(--green-lt);color:var(--green-dk)}
+.p-pickup{background:var(--purple-lt);color:var(--purple)}
+.p-receiving{background:var(--teal-lt);color:var(--teal)}
+.p-releasing{background:#FFF0D8;color:#7A4A00}
+.p-whjob{background:var(--surface2);color:var(--ink2)}
+.p-loading{background:#FFE8E0;color:#7A2000}
+.p-unloading{background:#E0F0FF;color:#003D5C}
+.p-other{background:var(--surface2);color:var(--ink2)}
+.p-team{background:var(--surface2);color:var(--ink2);border:1px solid var(--border);font-family:var(--mono)}
+.p-cut{background:var(--red-lt);color:var(--red)}
+
+/* Empty */
+.empty{text-align:center;padding:48px 20px;color:var(--ink3)}
+.empty p{font-size:13px;margin-top:6px}
+
+/* Doc modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:none;align-items:flex-end}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:16px 16px 0 0;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column}
+.modal-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:14px;font-weight:600}
+.modal-close{padding:4px 10px;font-size:13px;border-radius:6px;border:1px solid var(--border);background:none;cursor:pointer}
+.modal-body{flex:1;overflow-y:auto;padding:16px}
+.modal-body img{max-width:100%;border-radius:6px}
+.modal-body embed{width:100%;height:60vh}
+
+/* Setup overlay */
+.setup-overlay{position:fixed;inset:0;background:var(--bg);z-index:300;padding:24px 16px;overflow-y:auto;display:none}
+.setup-overlay.show{display:block}
+.setup-title{font-size:18px;font-weight:700;margin-bottom:6px}
+.setup-sub{font-size:13px;color:var(--ink2);margin-bottom:20px;line-height:1.6}
+.setup-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.setup-field label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.setup-field input{padding:12px 14px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;font-family:var(--sans);color:var(--ink);background:var(--surface);width:100%}
+.setup-field input:focus{outline:none;border-color:var(--blue)}
+.setup-btn{width:100%;padding:14px;font-size:15px;font-weight:600;border-radius:var(--r);border:none;background:var(--ink);color:#fff;cursor:pointer;font-family:var(--sans)}
+.setup-btn:active{opacity:.85}
+.setup-skip{display:block;text-align:center;margin-top:12px;font-size:13px;color:var(--ink3);cursor:pointer;text-decoration:underline}
+
+/* Bottom nav */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 16px 16px;display:flex;gap:8px;z-index:100}
+.bnav-btn{flex:1;padding:10px 8px;font-size:12px;font-weight:600;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);color:var(--ink2);cursor:pointer;font-family:var(--sans);text-align:center}
+.bnav-btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* Spin */
+.spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:rot .7s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- Setup overlay (first time) -->
+<div class="setup-overlay" id="setup-overlay">
+  <div style="max-width:400px;margin:0 auto">
+    <div style="font-size:28px;margin-bottom:12px">📦</div>
+    <div class="setup-title">WH Schedule</div>
+    <div class="setup-sub">Paste the Google Sheets Web App URL to connect. You only need to do this once.</div>
+    <div class="setup-field">
+      <label>Google Sheets Web App URL</label>
+      <input type="url" id="mob-gas-url" placeholder="https://script.google.com/macros/s/...">
+    </div>
+    <button class="setup-btn" onclick="mobileConnect()">Connect</button>
+    <span class="setup-skip" onclick="skipSetup()">Skip — view offline data only</span>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="hdr">
+  <div class="hdr-top">
+    <div class="hdr-logo"><div class="hdr-mark">WH</div>Schedule</div>
+    <button class="hdr-refresh" id="refresh-btn" onclick="doRefresh()">Refresh</button>
+  </div>
+  <div class="date-nav">
+    <button onclick="shiftDate(-1)">← Prev</button>
+    <div class="date-lbl" id="date-lbl"></div>
+    <button onclick="shiftDate(1)">Next →</button>
+  </div>
+</header>
+
+<!-- Status -->
+<div class="sbar warn" id="sbar">
+  <div class="sdot"></div>
+  <span id="sbar-text">Not connected</span>
+</div>
+
+<!-- Filters -->
+<div class="filters" id="filters">
+  <button class="fpill on" onclick="setFilter('',this)">All</button>
+  <button class="fpill" onclick="setFilter('tender',this)">Tender</button>
+  <button class="fpill" onclick="setFilter('delivery',this)">Delivery</button>
+  <button class="fpill" onclick="setFilter('pickup',this)">Pick Up</button>
+  <button class="fpill" onclick="setFilter('receiving',this)">Receiving</button>
+  <button class="fpill" onclick="setFilter('releasing',this)">Releasing</button>
+  <button class="fpill" onclick="setFilter('whjob',this)">WH Job</button>
+  <button class="fpill" onclick="setFilter('loading',this)">Loading</button>
+  <button class="fpill" onclick="setFilter('unloading',this)">Unloading</button>
+</div>
+
+<!-- Stats -->
+<div class="stats-bar" id="stats-bar"></div>
+
+<!-- Main content -->
+<main class="main" id="main-content"></main>
+
+<!-- Doc modal -->
+<div class="modal-overlay" id="doc-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-title">Document</span>
+      <button class="modal-close" onclick="closeDocModal()">Close</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Bottom nav -->
+<div class="bottom-nav">
+  <button class="bnav-btn on" id="bn-board" onclick="goSection('board')">📋 Board</button>
+  <button class="bnav-btn" id="bn-setup" onclick="goSection('setup')">⚙ Setup</button>
+</div>
+
+<script>
+const TODAY = new Date().toISOString().slice(0,10);
+let jobs = [];
+let gasUrl = '';
+let boardDate = TODAY;
+let activeFilter = '';
+
+const TYPE_LBL = {tender:'Tender',delivery:'Delivery',pickup:'Pick Up',receiving:'Receiving',releasing:'Releasing',whjob:'WH Job',loading:'Loading',unloading:'Unloading',other:'Other'};
+const TYPE_CLS = {tender:'p-tender',delivery:'p-delivery',pickup:'p-pickup',receiving:'p-receiving',releasing:'p-releasing',whjob:'p-whjob',loading:'p-loading',unloading:'p-unloading',other:'p-other'};
+const BANDS = ['early','am','noon','pm','eve'];
+const BAND_LBL = {early:'Before 9:00 AM',am:'9:00 – 12:00',noon:'12:00 – 15:00',pm:'15:00 – 18:00',eve:'After 18:00'};
+
+(function init(){
+  document.getElementById('date-lbl').textContent = fmtDate(TODAY);
+  try{ jobs = JSON.parse(localStorage.getItem('wh4-jobs')||'[]'); }catch(e){}
+  gasUrl = localStorage.getItem('wh4-gas-url')||'';
+  if(!gasUrl){
+    document.getElementById('setup-overlay').classList.add('show');
+  } else {
+    document.getElementById('mob-gas-url').value = gasUrl;
+    setBanner('ok','Connected');
+    doRefresh();
+  }
+  renderBoard();
+})();
+
+function goSection(s){
+  document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('bn-'+s).classList.add('on');
+  if(s==='setup') document.getElementById('setup-overlay').classList.add('show');
+  else document.getElementById('setup-overlay').classList.remove('show');
+}
+
+function mobileConnect(){
+  const v=document.getElementById('mob-gas-url').value.trim();
+  if(!v.startsWith('https://script.google.com')){ alert('Please paste a valid Apps Script URL.'); return; }
+  gasUrl=v; localStorage.setItem('wh4-gas-url',gasUrl);
+  setBanner('ok','Connected');
+  document.getElementById('setup-overlay').classList.remove('show');
+  doRefresh();
+}
+
+function skipSetup(){
+  document.getElementById('setup-overlay').classList.remove('show');
+  setBanner('warn','Offline — local data only');
+}
+
+function setBanner(type,msg){
+  const el=document.getElementById('sbar');
+  el.className='sbar '+type;
+  document.getElementById('sbar-text').textContent=msg;
+}
+
+async function doRefresh(){
+  if(!gasUrl) return;
+  const btn=document.getElementById('refresh-btn');
+  btn.innerHTML='<span class="spin"></span>';
+  try{
+    const r=await fetch(gasUrl);
+    const data=await r.json();
+    if(Array.isArray(data)&&data.length){
+      jobs=data.map(r=>({
+        id:r.id, date:normDate(r.date), type:(r.type||'').toLowerCase().trim(),
+        team:(r.team||'').trim(), client:r.client||'', commodity:r.commodity||'',
+        airline:(r.airline||'').trim(), time:normTime(r.time), cutoff:normTime(r.cutoff),
+        awb:r.awb||'', qty:r.qty||'', dest:(r.dest||'').trim(),
+        ref:r.ref||'', details:r.details||'', doclink:r.doclink||'', note:r.note||''
+      }));
+      try{localStorage.setItem('wh4-jobs',JSON.stringify(jobs));}catch(e){}
+      setBanner('ok','Updated just now');
+      renderBoard();
+    }
+  }catch(e){ setBanner('err','Could not connect'); }
+  btn.textContent='Refresh';
+}
+
+function setFilter(type, btn){
+  activeFilter=type;
+  document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderBoard();
+}
+
+function shiftDate(d){
+  const dt=new Date(boardDate+'T00:00:00'); dt.setDate(dt.getDate()+d);
+  boardDate=dt.toISOString().slice(0,10);
+  document.getElementById('date-lbl').textContent=fmtDate(boardDate);
+  renderBoard();
+}
+
+function fmtDate(s){
+  const d=new Date(s+'T00:00:00');
+  const isToday=s===TODAY;
+  const isTomorrow=s===new Date(new Date(TODAY+'T00:00:00').getTime()+86400000).toISOString().slice(0,10);
+  const base=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  return isToday?'Today — '+base:isTomorrow?'Tomorrow — '+base:base;
+}
+
+function normDate(s){ if(!s) return ''; s=String(s).trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; try{ const d=new Date(s); if(!isNaN(d)) return d.toISOString().slice(0,10); }catch(e){} return s; }
+function normTime(s){ if(!s) return ''; s=String(s).trim(); if(/^\d{2}:\d{2}$/.test(s)) return s; if(/^\d:\d{2}$/.test(s)) return '0'+s; return s; }
+
+function band(t){
+  if(!t) return 'pm';
+  const h=parseInt(t.split(':')[0]);
+  if(h<9) return 'early'; if(h<12) return 'am'; if(h<15) return 'noon'; if(h<18) return 'pm'; return 'eve';
+}
+
+function renderBoard(){
+  let day=jobs.filter(j=>normDate(j.date)===boardDate);
+  if(activeFilter) day=day.filter(j=>j.type===activeFilter);
+  day.sort((a,b)=>(a.cutoff||a.time||'99:99').localeCompare(b.cutoff||b.time||'99:99'));
+
+  document.getElementById('stats-bar').innerHTML=`
+    <div class="stat"><div class="stat-n">${day.length}</div><div class="stat-l">Total</div></div>
+    <div class="stat"><div class="stat-n">${day.filter(j=>j.dest).length}</div><div class="stat-l">Dispatch</div></div>
+    <div class="stat"><div class="stat-n">${day.filter(j=>!j.dest).length}</div><div class="stat-l">WH</div></div>
+    <div class="stat"><div class="stat-n">${[...new Set(day.map(j=>j.team).filter(Boolean))].length}</div><div class="stat-l">Teams</div></div>`;
+
+  if(!day.length){
+    document.getElementById('main-content').innerHTML='<div class="empty">No jobs for this date.<p>Pull to refresh or check another date.</p></div>';
+    return;
+  }
+
+  const byBand={}; BANDS.forEach(b=>byBand[b]=[]);
+  day.forEach(j=>byBand[band(j.cutoff||j.time)].push(j));
+
+  let html='';
+  BANDS.forEach(b=>{
+    const bj=byBand[b]; if(!bj.length) return;
+    html+=`<div class="tblock"><div class="thead"><span class="tbadge tb-${b}">${BAND_LBL[b]}</span><span class="tline"></span><span class="tcnt">${bj.length}</span></div>`;
+    const dj=bj.filter(j=>j.dest), wj=bj.filter(j=>!j.dest);
+    if(dj.length){
+      const byD={}; dj.forEach(j=>{if(!byD[j.dest])byD[j.dest]=[];byD[j.dest].push(j);});
+      Object.entries(byD).sort().forEach(([dest,djs])=>{
+        html+=`<div class="dest-grp"><span class="dest-lbl">→ ${dest}</span>`;
+        djs.forEach(j=>html+=cardHtml(j));
+        html+=`</div>`;
+      });
+    }
+    wj.forEach(j=>html+=cardHtml(j));
+    html+=`</div>`;
+  });
+
+  if(!html){
+    html='<div class="tblock"><div class="thead"><span class="tbadge tb-pm">All Jobs</span><span class="tline"></span></div>';
+    day.forEach(j=>html+=cardHtml(j));
+    html+='</div>';
+  }
+  document.getElementById('main-content').innerHTML=html;
+}
+
+function cardHtml(j){
+  const tc=TYPE_CLS[j.type]||'p-other', tl=TYPE_LBL[j.type]||j.type||'Other';
+  const isD=!!j.dest;
+  const timeStr=j.cutoff?'CUT '+j.cutoff:j.time||'—';
+  const docBtn=j.doclink?`<button class="jcard-doc" onclick="viewDoc('${j.id}')">📄 View Document</button>`:'';
+  return `<div class="jcard ${isD?'dispatch':'whouse'}">
+    <div class="jcard-top">
+      <div class="jcard-badges">
+        <span class="pill ${tc}">${tl}</span>
+        ${j.airline?`<span class="pill p-team">${j.airline}</span>`:''}
+        ${j.team?`<span class="pill p-team">T-${j.team}</span>`:''}
+        ${j.cutoff?`<span class="pill p-cut">CUT ${j.cutoff}</span>`:''}
+      </div>
+      <div class="jcard-time">${j.time||j.cutoff?timeStr:''}</div>
+    </div>
+    <div class="jcard-body">
+      ${j.client?`<div class="jcard-main">${j.client}</div>`:''}
+      <div class="jcard-sub">
+        ${j.dest?`<span>→ ${j.dest}</span>`:''}
+        ${j.commodity?`<span>${j.commodity}${j.qty?' × '+j.qty:''}</span>`:''}
+        ${j.awb?`<span style="font-family:var(--mono);font-size:11px">AWB: ${j.awb}</span>`:''}
+        ${j.ref&&!j.awb?`<span style="font-family:var(--mono);font-size:11px">Ref: ${j.ref}</span>`:''}
+      </div>
+      ${j.details?`<div class="jcard-detail">${j.details}</div>`:''}
+      ${j.note?`<div class="jcard-note">${j.note}</div>`:''}
+      ${docBtn}
+    </div>
+  </div>`;
+}
+
+function viewDoc(id){
+  const j=jobs.find(x=>String(x.id)===String(id));
+  if(!j||!j.doclink) return;
+  const modal=document.getElementById('doc-modal');
+  const body=document.getElementById('modal-body');
+  document.getElementById('modal-title').textContent=j.client?j.client+' — Document':'Document';
+  if(j.doclink.startsWith('data:image')){
+    const src=j.doclink.includes(';name:')?j.doclink.replace(/;name:[^;]+/,''): j.doclink;
+    body.innerHTML=`<img src="${src}" style="max-width:100%;border-radius:6px">`;
+  } else if(j.doclink.startsWith('data:application/pdf')){
+    const src=j.doclink.includes(';name:')?j.doclink.replace(/;name:[^;]+/,''):j.doclink;
+    body.innerHTML=`<embed src="${src}" type="application/pdf" width="100%" height="500px"><p style="margin-top:10px;text-align:center;font-size:12px;color:var(--ink3)">If PDF does not display, <a href="${src}" download="document.pdf" style="color:var(--blue)">tap here to download</a></p>`;
+  } else {
+    body.innerHTML=`<p style="text-align:center;padding:20px"><a href="${j.doclink}" target="_blank" style="color:var(--blue);font-size:14px">Open Document ↗</a></p>`;
+  }
+  modal.classList.add('show');
+}
+
+function closeDocModal(){ document.getElementById('doc-modal').classList.remove('show'); }
+function closeModal(e){ if(e.target===document.getElementById('doc-modal')) closeDocModal(); }
+</script>
+</body>
+</html>

@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WH / Dispatch Scheduler</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F2F0EA;--surface:#FFF;--surface2:#ECEAE3;--surface3:#E2DFD6;
+  --border:#D4D0C4;--border2:#B8B4A4;
+  --ink:#1A1916;--ink2:#5C5A54;--ink3:#9C9A94;
+  --blue:#1255A4;--blue-lt:#E4EDF8;--blue-dk:#0B3D7A;
+  --green:#0A6644;--green-lt:#E0F2EB;--green-dk:#074D33;
+  --amber:#8A5200;--amber-lt:#FDF0D8;
+  --red:#9B1C1C;--red-lt:#FEE8E8;--red-bd:#F5BABA;
+  --teal:#0D6E8A;--teal-lt:#E0F4F8;
+  --purple:#5B3FA6;--purple-lt:#EEE8FF;
+  --r:6px;--r-lg:10px;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:13px;min-height:100vh}
+
+/* Header */
+.hdr{background:var(--ink);color:#fff;padding:0 20px;height:48px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:200}
+.hdr-logo{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.08em;display:flex;align-items:center;gap:8px}
+.hdr-mark{width:20px;height:20px;border:1.5px solid rgba(255,255,255,.3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px}
+.hdr-date{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.4)}
+.hdr-sp{flex:1}
+.hdr-nav{display:flex;gap:2px}
+.hn{padding:5px 14px;font-size:12px;font-weight:500;border-radius:4px;border:none;cursor:pointer;font-family:var(--sans);background:none;color:rgba(255,255,255,.55);transition:all .12s}
+.hn:hover{color:#fff;background:rgba(255,255,255,.1)}
+.hn.on{background:#fff;color:var(--ink)}
+
+/* Status */
+.sbar{padding:6px 20px;font-size:11px;font-weight:500;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border)}
+.sbar.ok{background:var(--green-lt);color:var(--green-dk)}
+.sbar.warn{background:var(--amber-lt);color:var(--amber)}
+.sbar.err{background:var(--red-lt);color:var(--red)}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sbar.ok .sdot{background:var(--green)}.sbar.warn .sdot{background:var(--amber)}.sbar.err .sdot{background:var(--red)}
+
+/* Layout */
+.main{padding:18px 20px}
+.panel{display:none}.panel.on{display:block}
+
+/* Buttons */
+.btn{padding:6px 14px;font-size:12px;font-weight:500;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--ink);cursor:pointer;font-family:var(--sans);transition:all .12s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--surface2)}.btn:active{transform:scale(.98)}
+.btn.sm{padding:4px 10px;font-size:11px}.btn.xs{padding:2px 7px;font-size:11px}
+.btn.prim{background:var(--ink);color:#fff;border-color:var(--ink)}.btn.prim:hover{opacity:.85}
+.btn.prim:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn.danger{color:var(--red);border-color:var(--red-bd)}.btn.danger:hover{background:var(--red-lt)}
+.btn.ghost{border-color:transparent;background:none;color:var(--ink2)}.btn.ghost:hover{background:var(--surface2)}
+
+/* Form */
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3)}
+.field input,.field select,.field textarea{padding:7px 9px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--ink);font-size:12px;font-family:var(--sans);transition:border-color .12s;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(18,85,164,.1)}
+.req{color:var(--red)}
+
+/* Card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px}
+.card-head{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card-head::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* Team selector */
+.team-bar{display:flex;gap:6px;flex-wrap:wrap}
+.tbtn{padding:6px 18px;font-size:12px;font-weight:600;border-radius:20px;border:1.5px solid var(--border2);background:var(--surface);color:var(--ink2);cursor:pointer;font-family:var(--mono);transition:all .12s}
+.tbtn:hover{border-color:var(--ink);color:var(--ink)}
+.tbtn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* Job type tabs */
+.job-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.jt{padding:5px 13px;font-size:12px;font-weight:500;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--ink2);cursor:pointer;font-family:var(--sans);transition:all .12s}
+.jt:hover{background:var(--surface2);color:var(--ink)}
+.jt.on{color:#fff;border-color:transparent}
+.jt-tender.on{background:#1255A4}.jt-delivery.on{background:#0A6644}.jt-pickup.on{background:#5B3FA6}
+.jt-receiving.on{background:#0D6E8A}.jt-releasing.on{background:#7A4A00}.jt-whjob.on{background:#3D3D3D}
+.jt-loading.on{background:#7A2000}.jt-unloading.on{background:#003D5C}.jt-other.on{background:#555}
+
+/* Dynamic forms */
+.dform{display:none}.dform.on{display:block}
+.fg{display:grid;gap:9px;margin-bottom:10px}
+.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:1fr 1fr 1fr}.c4{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+/* Tender batch */
+.shared-box{background:var(--blue-lt);border:1px solid #B8D0EE;border-radius:var(--r-lg);padding:12px 14px;margin-bottom:10px}
+.shared-box-head{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--blue-dk);margin-bottom:10px}
+.batch-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;margin-bottom:10px}
+.batch-head{background:var(--surface2);padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.batch-title{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3)}
+.tscroll{overflow-x:auto}
+table.tt{width:100%;border-collapse:collapse;min-width:700px}
+table.tt th{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);padding:6px 7px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
+table.tt td{padding:3px 3px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.tt tbody tr:last-child td{border-bottom:none}
+table.tt tbody tr:hover td{background:#FAFAF7}
+table.tt input,table.tt select{padding:5px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--ink);font-size:12px;font-family:var(--sans);width:100%}
+table.tt input:focus,table.tt select:focus{outline:none;border-color:var(--blue);background:#F0F5FF}
+
+/* Release doc */
+.doc-upload-area{border:2px dashed var(--border2);border-radius:var(--r-lg);padding:20px;text-align:center;background:var(--surface2);transition:all .15s;cursor:pointer}
+.doc-upload-area:hover,.doc-upload-area.over{border-color:var(--blue);background:var(--blue-lt)}
+.doc-preview{margin-top:10px;padding:10px 12px;background:var(--green-lt);border:1px solid #9FE1CB;border-radius:var(--r);display:none;font-size:12px;color:var(--green-dk);align-items:center;gap:8px}
+.doc-preview.show{display:flex}
+
+/* Submit bar */
+.sub-bar{display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--border);margin-top:4px}
+.sub-bar .sp{flex:1}
+.rctr{font-size:12px;color:var(--ink2);font-family:var(--mono)}
+
+/* Board */
+.board-top{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.dnav{display:flex;align-items:center;gap:8px}
+.dlbl{font-size:15px;font-weight:600;font-family:var(--mono)}
+.filters{display:flex;gap:7px;margin-left:auto;flex-wrap:wrap}
+.fsel{font-size:12px;padding:5px 9px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--ink);font-family:var(--sans)}
+
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;text-align:center}
+.stat-n{font-size:22px;font-weight:600;font-family:var(--mono)}
+.stat-l{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);margin-top:2px}
+
+.tblock{margin-bottom:20px}
+.bhead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.tbadge{font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;white-space:nowrap;letter-spacing:.03em;font-family:var(--mono)}
+.tb-early{background:#E0F2EB;color:#074D33}.tb-am{background:#E4EDF8;color:#0B3D7A}
+.tb-noon{background:#FDF0D8;color:#8A5200}.tb-pm{background:#EEE8FF;color:#3D2875}
+.tb-eve{background:#FEE8E8;color:#7A1010}
+.tline{flex:1;height:1px;background:var(--border)}
+.tcnt{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+
+.dest-sec{margin-left:8px;margin-bottom:10px}
+.dest-lbl{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;background:var(--blue-lt);color:var(--blue-dk);border-radius:4px;margin-bottom:7px;font-family:var(--mono)}
+.wh-sec{margin-left:8px;margin-bottom:8px}
+.jcards{display:flex;flex-direction:column;gap:5px}
+
+.jcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;display:flex;gap:10px;align-items:flex-start;transition:border-color .12s}
+.jcard:hover{border-color:var(--border2)}
+.jcard.dispatch{border-left:3px solid var(--blue);border-radius:0 var(--r) var(--r) 0}
+.jcard.whouse{border-left:3px solid var(--green);border-radius:0 var(--r) var(--r) 0}
+.jbody{flex:1;min-width:0}
+.jr1{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:4px}
+.jr2{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.jnote{font-size:11px;color:var(--ink2);margin-top:4px;padding-top:4px;border-top:1px solid var(--border);font-style:italic}
+.jtime{font-size:12px;font-weight:600;white-space:nowrap;align-self:center;min-width:44px;text-align:right;font-family:var(--mono)}
+.jdel{opacity:0;transition:opacity .12s;align-self:center}.jcard:hover .jdel{opacity:1}
+.jfield{font-size:12px;color:var(--ink2)}.jfield strong{color:var(--ink);font-weight:500}
+.awb-txt{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.doc-link{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--green-lt);color:var(--green-dk);text-decoration:none;font-weight:500;display:inline-flex;align-items:center;gap:4px}
+.doc-link:hover{background:#C0EAD8}
+
+.pill{font-size:11px;font-weight:500;padding:2px 8px;border-radius:4px;white-space:nowrap}
+.p-tender{background:var(--blue-lt);color:var(--blue-dk)}
+.p-delivery{background:var(--green-lt);color:var(--green-dk)}
+.p-pickup{background:var(--purple-lt);color:var(--purple)}
+.p-receiving{background:var(--teal-lt);color:var(--teal)}
+.p-releasing{background:#FFF0D8;color:#7A4A00}
+.p-whjob{background:var(--surface3);color:var(--ink2)}
+.p-loading{background:#FFE8E0;color:#7A2000}
+.p-unloading{background:#E0F0FF;color:#003D5C}
+.p-other{background:var(--surface3);color:var(--ink2)}
+.p-team{background:var(--surface2);color:var(--ink2);border:1px solid var(--border);font-family:var(--mono);font-size:10px}
+.p-cut{background:var(--red-lt);color:var(--red)}
+
+.empty-board{text-align:center;padding:60px 20px;color:var(--ink3)}
+.empty-board p{font-size:12px;margin-top:6px}
+
+/* Setup */
+.setup-wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.step{display:flex;gap:12px;padding:12px 14px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border)}
+.step-n{width:22px;height:22px;background:var(--ink);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px;font-family:var(--mono)}
+.step-b{flex:1}
+.step-title{font-weight:600;font-size:13px;margin-bottom:4px}
+.step-desc{font-size:12px;color:var(--ink2);line-height:1.65}
+.step-desc code{font-family:var(--mono);background:var(--border);padding:1px 5px;border-radius:3px;font-size:11px}
+.gas-ta{width:100%;height:110px;font-family:var(--mono);font-size:10.5px;padding:8px;border:1px solid var(--border);border-radius:var(--r);background:#18171A;color:#E0DBD0;resize:none;line-height:1.5;margin-top:7px}
+.url-row{display:flex;gap:8px;margin-top:8px}
+.url-row input{flex:1;font-size:12px;padding:7px 9px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--sans);color:var(--ink);background:var(--surface)}
+.url-row input:focus{outline:none;border-color:var(--blue)}
+.conn-ok{font-size:12px;color:var(--green);margin-top:5px;display:none}
+.conn-ok.show{display:block}
+
+/* Spinner/Toast */
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--ink2);border-radius:50%;animation:rot .7s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:var(--r);font-size:13px;font-weight:500;z-index:9999;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none}
+.toast.show{opacity:1;transform:none;pointer-events:auto}
+.toast.ok{background:var(--green-dk);color:#fff}.toast.err{background:var(--red);color:#fff}.toast.info{background:var(--ink);color:#fff}
+
+/* ── Edit Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.show{display:flex}
+.edit-modal{background:var(--surface);border-radius:var(--r-lg);width:min(620px,100%);max-height:90vh;overflow-y:auto;border:1px solid var(--border);box-shadow:0 8px 40px rgba(0,0,0,.2)}
+.edit-modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1}
+.edit-modal-title{font-size:14px;font-weight:600}
+.edit-modal-body{padding:16px;display:flex;flex-direction:column;gap:10px}
+.edit-modal-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--surface)}
+.edit-grid{display:grid;gap:9px}
+.eg2{grid-template-columns:1fr 1fr}
+.eg3{grid-template-columns:1fr 1fr 1fr}
+.eg4{grid-template-columns:repeat(4,1fr)}
+.edit-section{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--border);margin-bottom:2px}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-logo"><div class="hdr-mark">WH</div>Dispatch Scheduler</div>
+  <div class="hdr-date" id="hdr-date"></div>
+  <div class="hdr-sp"></div>
+  <nav class="hdr-nav">
+    <button class="hn" onclick="goTab('setup')">Setup</button>
+    <button class="hn on" onclick="goTab('entry')">Entry</button>
+    <button class="hn" onclick="goTab('board')">Schedule Board</button>
+  </nav>
+</header>
+
+<div class="sbar warn" id="sbar">
+  <div class="sdot"></div>
+  <span id="sbar-text">Not connected to Google Sheets — go to Setup.</span>
+</div>
+
+<main class="main">
+
+<!-- ══ SETUP ══ -->
+<div class="panel" id="panel-setup">
+  <div class="setup-wrap">
+    <div class="card">
+      <div class="card-head">Google Sheets connection</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="step"><div class="step-n">1</div><div class="step-b">
+          <div class="step-title">Create a Google Sheet</div>
+          <div class="step-desc">Go to <strong>sheets.google.com</strong>, create a blank spreadsheet, name it "WH Scheduler". Share with all staff.</div>
+        </div></div>
+        <div class="step"><div class="step-n">2</div><div class="step-b">
+          <div class="step-title">Add the Apps Script</div>
+          <div class="step-desc">Click <strong>Extensions → Apps Script</strong>. Delete existing code, paste the script below, click Save.</div>
+          <textarea class="gas-ta" id="gas-ta" readonly></textarea>
+          <button class="btn sm" style="margin-top:7px" onclick="copyGas()">Copy script</button>
+        </div></div>
+        <div class="step"><div class="step-n">3</div><div class="step-b">
+          <div class="step-title">Deploy as Web App</div>
+          <div class="step-desc"><strong>Deploy → New Deployment → Web App</strong>. Execute as: <strong>Me</strong>. Who has access: <strong>Anyone</strong>. Click Deploy, authorize, copy the URL.</div>
+        </div></div>
+        <div class="step"><div class="step-n">4</div><div class="step-b">
+          <div class="step-title">Paste the Web App URL here</div>
+          <div class="url-row">
+            <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/...">
+            <button class="btn prim" onclick="connectSheets()">Connect</button>
+          </div>
+          <div class="conn-ok" id="conn-ok">✓ Connected to Google Sheets</div>
+        </div></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--ink2);line-height:1.7;padding:11px 13px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border)">
+      <strong>Gemini API key</strong> is embedded in this file. Open in a text editor and replace <code>AIzaSyC1hm6D2pi7kKKwD7d_OMASNdY58FTmq1c</code> to update it.
+    </div>
+  </div>
+</div>
+
+<!-- ══ ENTRY ══ -->
+<div class="panel on" id="panel-entry">
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div class="card">
+      <div class="card-head">Team</div>
+      <div class="team-bar">
+        <button class="tbtn on" onclick="selTeam('A',this)">A</button>
+        <button class="tbtn" onclick="selTeam('B',this)">B</button>
+        <button class="tbtn" onclick="selTeam('C',this)">C</button>
+        <button class="tbtn" onclick="selTeam('D',this)">D</button>
+        <button class="tbtn" onclick="selTeam('E',this)">E</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">Job Type</div>
+      <div class="job-tabs">
+        <button class="jt jt-tender on" onclick="selJob('tender',this)">Tender</button>
+        <button class="jt jt-delivery" onclick="selJob('delivery',this)">Delivery</button>
+        <button class="jt jt-pickup" onclick="selJob('pickup',this)">Pick Up</button>
+        <button class="jt jt-receiving" onclick="selJob('receiving',this)">Receiving</button>
+        <button class="jt jt-releasing" onclick="selJob('releasing',this)">Releasing</button>
+        <button class="jt jt-whjob" onclick="selJob('whjob',this)">WH Job</button>
+        <button class="jt jt-loading" onclick="selJob('loading',this)">Loading</button>
+        <button class="jt jt-unloading" onclick="selJob('unloading',this)">Unloading</button>
+        <button class="jt jt-other" onclick="selJob('other',this)">Other</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TENDER -->
+  <div class="dform on" id="form-tender">
+    <div class="shared-box">
+      <div class="shared-box-head">Shared fields — applied to all rows below</div>
+      <div class="fg c3">
+        <div class="field"><label>Date <span class="req">*</span></label><input type="date" id="t-date"></div>
+        <div class="field"><label>Commodity</label><input type="text" id="t-comm" placeholder="e.g. TUNA"></div>
+        <div class="field"><label>Client</label><input type="text" id="t-client" placeholder="e.g. SS, MAN AE"></div>
+      </div>
+    </div>
+    <div class="batch-box">
+      <div class="batch-head">
+        <span class="batch-title">Tender rows — one row per AWB</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn sm" onclick="addTRow()">+ Row</button>
+          <button class="btn sm danger" onclick="clearTRows()">Clear</button>
+        </div>
+      </div>
+      <div class="tscroll">
+        <table class="tt">
+          <thead><tr>
+            <th style="width:66px">Airline</th>
+            <th style="width:80px">Cut-off</th>
+            <th style="width:114px">AWB # <span class="req">*</span></th>
+            <th style="width:54px">Qty</th>
+            <th style="width:86px">Destination</th>
+            <th style="width:108px">Note</th>
+            <th style="width:46px"></th>
+          </tr></thead>
+          <tbody id="t-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="sub-bar">
+      <span class="rctr" id="t-ctr">0 rows</span>
+      <div class="sp"></div>
+      <button class="btn" onclick="resetTender()">Reset</button>
+      <button class="btn prim" onclick="submitTender()">Submit all rows →</button>
+    </div>
+  </div>
+
+  <!-- DELIVERY -->
+  <div class="dform" id="form-delivery">
+    <div class="card">
+      <div class="card-head">Delivery</div>
+      <div class="fg c4"><div class="field"><label>Date <span class="req">*</span></label><input type="date" id="d-date"></div><div class="field"><label>Ref #</label><input type="text" id="d-ref" placeholder="REF-001"></div><div class="field"><label>Delivery Time</label><input type="text" id="d-time" placeholder="HH:MM" maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)" style="font-family:var(--mono)"></div><div class="field"><label>Qty</label><input type="text" id="d-qty" placeholder="10cs / 2plt"></div></div>
+      <div class="fg c3"><div class="field"><label>Deliver To <span class="req">*</span></label><input type="text" id="d-to" placeholder="LAX / Long Beach Port"></div><div class="field"><label>Client</label><input type="text" id="d-client" placeholder="Client name"></div><div class="field"><label>Commodity</label><input type="text" id="d-comm" placeholder="Commodity"></div></div>
+      <div class="fg c2"><div class="field"><label>Details</label><input type="text" id="d-details" placeholder="Additional details..."></div><div class="field"><label>Note</label><input type="text" id="d-note" placeholder="Special instructions..."></div></div>
+      <div class="field" style="margin-top:4px">
+        <label>Attached Document <span style="font-weight:400;color:var(--ink3)">(receipt, packing list, etc. — optional)</span></label>
+        <label for="d-file-inp" id="d-drop-zone" style="border:2px dashed var(--border2);border-radius:var(--r-lg);padding:16px;text-align:center;background:var(--surface2);cursor:pointer;display:block;transition:all .15s" ondragover="event.preventDefault();this.style.borderColor='var(--blue)';this.style.background='var(--blue-lt)'" ondragleave="this.style.borderColor='';this.style.background='var(--surface2)'" ondrop="handleDocDrop(event,'d')">
+          <input type="file" id="d-file-inp" accept="application/pdf,image/*" style="display:none" onchange="handleDocFile(this.files[0],'d')">
+          <div style="font-size:18px;margin-bottom:4px;opacity:.4">📎</div>
+          <div style="font-size:12px;font-weight:500;color:var(--ink)">Drop file or click to upload</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:3px">PDF or image &nbsp;·&nbsp; <kbd style="background:var(--surface);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-size:10px">Ctrl+V</kbd> to paste</div>
+        </label>
+        <div id="d-doc-preview" style="display:none;margin-top:8px;padding:9px 12px;background:var(--green-lt);border:1px solid #9FE1CB;border-radius:var(--r);align-items:center;gap:10px">
+          <span style="font-size:18px" id="d-doc-icon">📄</span>
+          <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:12px;color:var(--green-dk)" id="d-doc-name"></div><div style="font-size:11px;color:var(--green-dk);opacity:.8" id="d-doc-size"></div></div>
+          <button class="btn xs" onclick="clearDoc('d')" style="flex-shrink:0">Remove</button>
+        </div>
+        <div id="d-img-preview" style="display:none;margin-top:6px"><img id="d-img-el" style="max-width:100%;max-height:180px;border-radius:var(--r);border:1px solid var(--border)"></div>
+      </div>
+      <div class="sub-bar"><div class="sp"></div><button class="btn" onclick="resetForm('delivery')">Reset</button><button class="btn prim" onclick="submitSingle('delivery')">Submit →</button></div>
+    </div>
+  </div>
+
+  <!-- PICK UP -->
+  <div class="dform" id="form-pickup">
+    <div class="card">
+      <div class="card-head">Pick Up</div>
+      <div class="fg c4"><div class="field"><label>Date <span class="req">*</span></label><input type="date" id="pu-date"></div><div class="field"><label>Ref # / AWB #</label><input type="text" id="pu-ref" placeholder="REF / AWB"></div><div class="field"><label>Pick Up Time</label><input type="text" id="pu-time" placeholder="HH:MM" maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)" style="font-family:var(--mono)"></div><div class="field"><label>Qty</label><input type="text" id="pu-qty" placeholder="10cs / 2plt"></div></div>
+      <div class="fg c3"><div class="field"><label>Pick Up From <span class="req">*</span></label><input type="text" id="pu-from" placeholder="Location / Address"></div><div class="field"><label>Deliver To</label><input type="text" id="pu-dest" placeholder="Destination"></div><div class="field"><label>Commodity</label><input type="text" id="pu-comm" placeholder="Commodity"></div></div>
+      <div class="fg c2"><div class="field"><label>Client</label><input type="text" id="pu-client" placeholder="Client"></div><div class="field"><label>Note</label><input type="text" id="pu-note" placeholder="Note..."></div></div>
+      <div class="field" style="margin-top:4px">
+        <label>Attached Document <span style="font-weight:400;color:var(--ink3)">(receipt, BOL, etc. — optional)</span></label>
+        <label for="pu-file-inp" id="pu-drop-zone" style="border:2px dashed var(--border2);border-radius:var(--r-lg);padding:16px;text-align:center;background:var(--surface2);cursor:pointer;display:block;transition:all .15s" ondragover="event.preventDefault();this.style.borderColor='var(--blue)';this.style.background='var(--blue-lt)'" ondragleave="this.style.borderColor='';this.style.background='var(--surface2)'" ondrop="handleDocDrop(event,'pu')">
+          <input type="file" id="pu-file-inp" accept="application/pdf,image/*" style="display:none" onchange="handleDocFile(this.files[0],'pu')">
+          <div style="font-size:18px;margin-bottom:4px;opacity:.4">📎</div>
+          <div style="font-size:12px;font-weight:500;color:var(--ink)">Drop file or click to upload</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:3px">PDF or image &nbsp;·&nbsp; <kbd style="background:var(--surface);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-size:10px">Ctrl+V</kbd> to paste</div>
+        </label>
+        <div id="pu-doc-preview" style="display:none;margin-top:8px;padding:9px 12px;background:var(--green-lt);border:1px solid #9FE1CB;border-radius:var(--r);align-items:center;gap:10px">
+          <span style="font-size:18px" id="pu-doc-icon">📄</span>
+          <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:12px;color:var(--green-dk)" id="pu-doc-name"></div><div style="font-size:11px;color:var(--green-dk);opacity:.8" id="pu-doc-size"></div></div>
+          <button class="btn xs" onclick="clearDoc('pu')" style="flex-shrink:0">Remove</button>
+        </div>
+        <div id="pu-img-preview" style="display:none;margin-top:6px"><img id="pu-img-el" style="max-width:100%;max-height:180px;border-radius:var(--r);border:1px solid var(--border)"></div>
+      </div>
+      <div class="sub-bar"><div class="sp"></div><button class="btn" onclick="resetForm('pickup')">Reset</button><button class="btn prim" onclick="submitSingle('pickup')">Submit →</button></div>
+    </div>
+  </div>
+
+  <!-- RECEIVING -->
+  <div class="dform" id="form-receiving">
+    <div class="card">
+      <div class="card-head">Receiving</div>
+      <div class="fg c4"><div class="field"><label>Date <span class="req">*</span></label><input type="date" id="rc-date"></div><div class="field"><label>Ref #</label><input type="text" id="rc-ref" placeholder="REF-001"></div><div class="field"><label>Expected Time</label><input type="text" id="rc-time" placeholder="HH:MM" maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)" style="font-family:var(--mono)"></div><div class="field"><label>Carrier</label><input type="text" id="rc-carrier" placeholder="FedEx / UPS / Truck"></div></div>
+      <div class="fg c4"><div class="field"><label>Client Name <span class="req">*</span></label><input type="text" id="rc-client" placeholder="Client"></div><div class="field"><label>Consignee</label><input type="text" id="rc-consignee" placeholder="Consignee"></div><div class="field"><label>Qty</label><input type="text" id="rc-qty" placeholder="10cs / 2plt"></div><div class="field"><label>Commodity</label><input type="text" id="rc-comm" placeholder="Commodity"></div></div>
+      <div class="fg c2"><div class="field"><label>Document Link (Google Drive)</label><input type="url" id="rc-docs" placeholder="https://drive.google.com/..."></div><div class="field"><label>Note</label><input type="text" id="rc-note" placeholder="Note..."></div></div>
+      <div class="sub-bar"><div class="sp"></div><button class="btn" onclick="resetForm('receiving')">Reset</button><button class="btn prim" onclick="submitSingle('receiving')">Submit →</button></div>
+    </div>
+  </div>
+
+  <!-- RELEASING -->
+  <div class="dform" id="form-releasing">
+    <div class="card">
+      <div class="card-head">Releasing</div>
+      <div class="fg c4"><div class="field"><label>Date <span class="req">*</span></label><input type="date" id="rl-date"></div><div class="field"><label>Ref #</label><input type="text" id="rl-ref" placeholder="REF-001"></div><div class="field"><label>Carrier</label><input type="text" id="rl-carrier" placeholder="Carrier"></div><div class="field"><label>Client Name</label><input type="text" id="rl-client" placeholder="Client"></div></div>
+      <div class="fg c4"><div class="field"><label>Consignee</label><input type="text" id="rl-consignee" placeholder="Consignee"></div><div class="field"><label>Qty</label><input type="text" id="rl-qty" placeholder="10cs / 2plt"></div><div class="field"><label>Commodity</label><input type="text" id="rl-comm" placeholder="Commodity"></div><div class="field"><label>Note</label><input type="text" id="rl-note" placeholder="Note..."></div></div>
+
+      <!-- Release document upload -->
+      <div style="margin-top:4px">
+        <div class="field" style="margin-bottom:8px">
+          <label>Release Document <span style="font-weight:400;color:var(--ink3)">(PDF or image — upload or paste)</span></label>
+          <label for="rl-file-inp" id="rl-drop-zone" style="border:2px dashed var(--border2);border-radius:var(--r-lg);padding:20px 16px;text-align:center;background:var(--surface2);cursor:pointer;display:block;transition:all .15s" ondragover="event.preventDefault();this.style.borderColor='var(--blue)';this.style.background='var(--blue-lt)'" ondragleave="this.style.borderColor='';this.style.background='var(--surface2)'" ondrop="handleDocDrop(event,'rl')">
+            <input type="file" id="rl-file-inp" accept="application/pdf,image/*" style="display:none" onchange="handleDocFile(this.files[0],'rl')">
+            <div style="font-size:22px;margin-bottom:6px;opacity:.4">📎</div>
+            <div style="font-size:13px;font-weight:500;color:var(--ink)">Drop file here or click to upload</div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:4px">PDF or image &nbsp;·&nbsp; Or press <kbd style="background:var(--surface);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-size:10px">Ctrl+V</kbd> to paste a screenshot</div>
+          </label>
+          <div id="rl-doc-preview" style="display:none;margin-top:10px;padding:10px 12px;background:var(--green-lt);border:1px solid #9FE1CB;border-radius:var(--r);align-items:center;gap:10px">
+            <span style="font-size:20px" id="rl-doc-icon">📄</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:12px;color:var(--green-dk)" id="rl-doc-name">Document ready</div>
+              <div style="font-size:11px;color:var(--green-dk);opacity:.8" id="rl-doc-size"></div>
+            </div>
+            <button class="btn xs" onclick="clearDoc('rl')" style="flex-shrink:0">Remove</button>
+          </div>
+          <div id="rl-img-preview" style="display:none;margin-top:8px"><img id="rl-img-el" style="max-width:100%;max-height:200px;border-radius:var(--r);border:1px solid var(--border)"></div>
+        </div>
+      </div>
+
+      <div class="sub-bar">
+        <button class="btn" style="background:var(--purple-lt);color:var(--purple);border-color:var(--purple)" onclick="generateReleaseLetter()">📄 Generate Release Letter</button>
+        <div class="sp"></div>
+        <button class="btn" onclick="resetForm('releasing')">Reset</button>
+        <button class="btn prim" onclick="submitSingle('releasing')">Submit →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WH JOB -->
+  <div class="dform" id="form-whjob">
+    <div class="card">
+      <div class="card-head">WH Job</div>
+      <div class="fg c4"><div class="field"><label>Date <span class="req">*</span></label><input type="date" id="wj-date"></div><div class="field"><label>Ref #</label><input type="text" id="wj-ref" placeholder="REF-001"></div><div class="field"><label>Start Time</label><input type="text" id="wj-start" placeholder="HH:MM" maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)" style="font-family:var(--mono)"></div><div class="field"><label>End Time</label><input type="text" id="wj-end" placeholder="HH:MM" maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)" style="font-family:var(--mono)"></div></div>
+      <div class="fg c4"><div class="field"><label>Type of Work <span class="req">*</span></label><select id="wj-type"><option value="">— select —</option><option>Packing</option><option>Segregation</option><option>Labeling</option><option>Inspection</option><option>Repacking</option><option>Other</option></select></div><div class="field"><label>Qty</label><input type="text" id="wj-qty" placeholder="10cs / 2plt"></div><div class="field"><label>Client</label><input type="text" id="wj-client" placeholder="Client"></div><div class="field"><label>Commodity</label><input type="text" id="wj-comm" placeholder="Commodity"></div></div>
+      <div class="fg c2"><div class="field"><label>Details</label><input type="text" id="wj-details" placeholder="Additional details..."></div><div class="field"><label>Note</label><input type="text" id="wj-note" placeholder="Note..."></div></div>
+      <div class="sub-bar"><div class="sp"></div><button class="btn" onclick="resetForm('whjob')">Reset</button><button class="btn prim" onclick="submitSingle('whjob')">Submit →</button></div>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="dform" id="form-loading">
+    <div class="card">
+      <div class="card-head">Loading</div>
+      <div class="fg c4"><div class="field"><label>Date <span class="req">*</span></label><input type="date" id="lo-date"></div><div class="field"><label>Container #</label><input type="text" id="lo-cont" placeholder="ABCU1234567"></div><div class="field"><label>Start Time</label><input type="text" id="lo-start" placeholder="HH:MM" maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)" style="font-family:var(--mono)"></div><div class="field"><label>Live or Drop</label><select id="lo-ld"><option value="">—</option><option>Live</option><option>Drop</option></select></div></div>
+      <div class="fg c4"><div class="field"><label>Type of Load</label><select id="lo-type"><option value="">—</option><option>Bulk</option><option>Palletized</option></select></div><div class="field"><label>Qty</label><input type="text" id="lo-qty" placeholder="10cs / 2plt"></div><div class="field"><label>Client</label><input type="text" id="lo-client" placeholder="Client"></div><div class="field"><label>Commodity</label><input type="text" id="lo-comm" placeholder="Commodity"></div></div>
+      <div class="fg c2"><div class="field"><label>Details</label><input type="text" id="lo-details" placeholder="Details..."></div><div class="field"><label>Note</label><input type="text" id="lo-note" placeholder="Note..."></div></div>
+      <div class="sub-bar"><div class="sp"></div><button class="btn" onclick="resetForm('loading')">Reset</button><button class="btn prim" onclick="submitSingle('loading')">Submit →</button></div>
+    </div>
+  </div>
+
+  <!-- UNLOADING -->
+  <div class="dform" id="form-unloading">
+    <div class="card">
+      <div class="card-head">Unloading</div>
+      <div class="fg c4"><div class="field"><label>Date <span class="req">*</span></label><input type="date" id="ul-date"></div><div class="field"><label>Container #</label><input type="text" id="ul-cont" placeholder="ABCU1234567"></div><div class="field"><label>Start Time</label><input type="text" id="ul-start" placeholder="HH:MM" maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)" style="font-family:var(--mono)"></div><div class="field"><label>Live or Drop</label><select id="ul-ld"><option value="">—</option><option>Live</option><option>Drop</option></select></div></div>
+      <div class="fg c4"><div class="field"><label>Type of Load</label><select id="ul-type"><option value="">—</option><option>Bulk</option><option>Palletized</option></select></div><div class="field"><label>Qty</label><input type="text" id="ul-qty" placeholder="10cs / 2plt"></div><div class="field"><label>Client</label><input type="text" id="ul-client" placeholder="Client"></div><div class="field"><label>Commodity</label><input type="text" id="ul-comm" placeholder="Commodity"></div></div>
+      <div class="fg c2"><div class="field"><label>Details</label><input type="text" id="ul-details" placeholder="Details..."></div><div class="field"><label>Note</label><input type="text" id="ul-note" placeholder="Note..."></div></div>
+      <div class="sub-bar"><div class="sp"></div><button class="btn" onclick="resetForm('unloading')">Reset</button><button class="btn prim" onclick="submitSingle('unloading')">Submit →</button></div>
+    </div>
+  </div>
+
+  <!-- OTHER -->
+  <div class="dform" id="form-other">
+    <div class="card">
+      <div class="card-head">Other</div>
+      <div class="fg c4"><div class="field"><label>Date <span class="req">*</span></label><input type="date" id="ot-date"></div><div class="field"><label>Time</label><input type="text" id="ot-time" placeholder="HH:MM" maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)" style="font-family:var(--mono)"></div><div class="field"><label>Client</label><input type="text" id="ot-client" placeholder="Client"></div><div class="field"><label>Qty</label><input type="text" id="ot-qty" placeholder="Quantity"></div></div>
+      <div class="fg c2"><div class="field"><label>Description <span class="req">*</span></label><input type="text" id="ot-desc" placeholder="Description of work"></div><div class="field"><label>Note</label><input type="text" id="ot-note" placeholder="Note..."></div></div>
+      <div class="sub-bar"><div class="sp"></div><button class="btn" onclick="resetForm('other')">Reset</button><button class="btn prim" onclick="submitSingle('other')">Submit →</button></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ BOARD ══ -->
+<div class="panel" id="panel-board">
+  <div class="board-top">
+    <div class="dnav">
+      <button class="btn" onclick="shiftDate(-1)">← Prev</button>
+      <div class="dlbl" id="board-lbl"></div>
+      <button class="btn" onclick="shiftDate(1)">Next →</button>
+    </div>
+    <div class="filters">
+      <select class="fsel" id="flt-team" onchange="renderBoard()"><option value="">All Teams</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select>
+      <select class="fsel" id="flt-type" onchange="renderBoard()"><option value="">All Types</option><option value="tender">Tender</option><option value="delivery">Delivery</option><option value="pickup">Pick Up</option><option value="receiving">Receiving</option><option value="releasing">Releasing</option><option value="whjob">WH Job</option><option value="loading">Loading</option><option value="unloading">Unloading</option><option value="other">Other</option></select>
+      <select class="fsel" id="flt-dest" onchange="renderBoard()"><option value="">All Destinations</option></select>
+      <button class="btn" onclick="refreshBoard()"><span class="spin" id="rspin" style="display:none"></span>Refresh</button>
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div id="board"></div>
+</div>
+
+</main>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="edit-overlay" onclick="closeEditIfOutside(event)">
+  <div class="edit-modal" id="edit-modal">
+    <div class="edit-modal-head">
+      <span class="edit-modal-title" id="edit-modal-title">Edit Job</span>
+      <button class="btn sm ghost" onclick="closeEdit()">✕ Close</button>
+    </div>
+    <div class="edit-modal-body" id="edit-modal-body">
+      <!-- populated dynamically -->
+    </div>
+    <div class="edit-modal-footer">
+      <button class="btn danger" onclick="deleteFromEdit()">Delete job</button>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="closeEdit()">Cancel</button>
+      <button class="btn prim" onclick="saveEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast"  id="toast"></div>
+
+<script>
+// ─── Config ───────────────────────────────────────────────────────
+const GEMINI_KEY = 'YOUR_GEMINI_KEY_HERE';
+const TODAY = new Date().toISOString().slice(0,10);
+
+// ─── Apps Script (GAS) ────────────────────────────────────────────
+const GAS = `function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (e.parameter.data) {
+      var d = JSON.parse(decodeURIComponent(e.parameter.data));
+      if (d.action === 'add') {
+        d.jobs.forEach(function(j) { writeJob(ss, j); });
+      } else if (d.action === 'delete') {
+        deleteJob(ss, d.id);
+      }
+      return ContentService.createTextOutput('ok').setMimeType(ContentService.MimeType.TEXT);
+    }
+    // Read all jobs
+    var master = ss.getSheetByName('_data');
+    if (!master || master.getLastRow() <= 1) return ContentService.createTextOutput('[]').setMimeType(ContentService.MimeType.JSON);
+    var rows = master.getDataRange().getValues();
+    var keys = rows[0];
+    var out = rows.slice(1).map(function(r){ var o={}; keys.forEach(function(k,i){ o[k]=r[i]!==undefined?String(r[i]):''; }); return o; });
+    return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput('[]').setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function writeJob(ss, j) {
+  // 1. Write to _data master sheet
+  var master = ss.getSheetByName('_data') || ss.insertSheet('_data');
+  if (master.getLastRow() === 0) {
+    master.appendRow(['id','date','type','team','client','commodity','airline','time','cutoff','awb','qty','dest','ref','details','doclink','note','saved_at']);
+  }
+  master.appendRow([j.id,j.date,j.type,j.team,j.client,j.commodity,j.airline,j.time,j.cutoff,j.awb,j.qty,j.dest,j.ref,j.details,j.doclink,j.note,new Date().toISOString()]);
+
+  // 2. Write to date tab (auto-create if needed)
+  var tabName = j.date; // e.g. "2026-05-01"
+  var tab = ss.getSheetByName(tabName);
+  if (!tab) {
+    tab = ss.insertSheet(tabName);
+    // Style header
+    tab.appendRow(['Time','Type','Team','Client','Commodity','AWB / Ref','Qty','Destination','Airline','Cut-off','Details','Doc','Note']);
+    tab.getRange(1,1,1,13).setFontWeight('bold').setBackground('#1A1916').setFontColor('#FFFFFF');
+    tab.setFrozenRows(1);
+    // Sort tabs by date
+    var sheets = ss.getSheets();
+    sheets.sort(function(a,b){ return a.getName().localeCompare(b.getName()); });
+    sheets.forEach(function(s,i){ ss.moveActiveSheet && ss.setActiveSheet(s); });
+  }
+  // Time band row color
+  var sortTime = j.cutoff || j.time || '';
+  var h = sortTime ? parseInt(sortTime.split(':')[0]) : -1;
+  var bg = h < 0 ? '#FFFFFF' : h < 9 ? '#E0F2EB' : h < 12 ? '#E4EDF8' : h < 15 ? '#FDF0D8' : h < 18 ? '#EEE8FF' : '#FEE8E8';
+  var docFormula = j.doclink ? '=HYPERLINK("'+j.doclink+'","📄 View Doc")' : '';
+  var row = tab.getLastRow() + 1;
+  tab.appendRow([j.time||'—',j.type,j.team,j.client,j.commodity,j.awb||j.ref,j.qty,j.dest,j.airline,j.cutoff,j.details,docFormula,j.note]);
+  tab.getRange(row,1,1,13).setBackground(bg);
+  // Auto-sort by time
+  if (tab.getLastRow() > 2) tab.getRange(2,1,tab.getLastRow()-1,13).sort(1);
+}
+
+function deleteJob(ss, id) {
+  var master = ss.getSheetByName('_data');
+  if (!master) return;
+  var rows = master.getDataRange().getValues();
+  for (var i = rows.length-1; i >= 1; i--) {
+    if (String(rows[i][0]) === String(id)) { master.deleteRow(i+1); break; }
+  }
+}`;
+
+// ─── State ────────────────────────────────────────────────────────
+let jobs = [], gasUrl = '', curTeam = 'A', curJob = 'tender', boardDate = TODAY;
+
+// ─── Init ─────────────────────────────────────────────────────────
+(function init(){
+  document.getElementById('hdr-date').textContent = fmtDateShort(TODAY);
+  document.getElementById('gas-ta').value = GAS;
+  setAllDates(TODAY);
+  try{ jobs = JSON.parse(localStorage.getItem('wh4-jobs')||'[]'); }catch(e){}
+  gasUrl = localStorage.getItem('wh4-gas-url')||'';
+  if(gasUrl){
+    document.getElementById('gas-url').value = gasUrl;
+    setBanner('ok','Connected to Google Sheets.');
+    document.getElementById('conn-ok').classList.add('show');
+    loadFromSheets();
+  }
+  addTRow(); addTRow(); addTRow(); cntTRows();
+  renderBoard();
+})();
+
+function setAllDates(d){
+  ['t-date','d-date','pu-date','rc-date','rl-date','wj-date','lo-date','ul-date','ot-date']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=d; });
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────
+function goTab(t){
+  document.querySelectorAll('.hn').forEach((el,i)=>el.classList.toggle('on',['setup','entry','board'][i]===t));
+  document.querySelectorAll('.panel').forEach(el=>el.classList.remove('on'));
+  document.getElementById('panel-'+t).classList.add('on');
+  if(t==='board'){ boardDate=document.getElementById('t-date').value||TODAY; renderBoard(); }
+}
+
+function selTeam(t,btn){ curTeam=t; document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); }
+function selJob(j,btn){
+  curJob=j;
+  document.querySelectorAll('.jt').forEach(b=>b.classList.remove('on')); btn.classList.add('on');
+  document.querySelectorAll('.dform').forEach(f=>f.classList.remove('on'));
+  document.getElementById('form-'+j).classList.add('on');
+}
+
+// ─── Banner ───────────────────────────────────────────────────────
+function setBanner(type,msg){ const el=document.getElementById('sbar'); el.className='sbar '+type; document.getElementById('sbar-text').textContent=msg; }
+
+// ─── Setup ────────────────────────────────────────────────────────
+function copyGas(){ navigator.clipboard.writeText(GAS).then(()=>toast('Script copied!','ok')); }
+function connectSheets(){
+  const v=document.getElementById('gas-url').value.trim();
+  if(!v.startsWith('https://script.google.com')){ toast('Paste a valid Apps Script URL.','err'); return; }
+  gasUrl=v; localStorage.setItem('wh4-gas-url',gasUrl);
+  setBanner('ok','Connected to Google Sheets.');
+  document.getElementById('conn-ok').classList.add('show');
+  toast('Connected!','ok'); loadFromSheets();
+}
+
+// ─── Sheets sync ──────────────────────────────────────────────────
+async function loadFromSheets(){
+  if(!gasUrl) return;
+  try{
+    const r=await fetch(gasUrl);
+    const data=await r.json();
+    if(Array.isArray(data)&&data.length){
+      jobs=data.map(r=>({
+        id:r.id, date:normDate(r.date), type:(r.type||'').toLowerCase().trim(),
+        team:(r.team||'').trim(), client:r.client||'', commodity:r.commodity||'',
+        airline:(r.airline||'').trim(), time:normTime(r.time), cutoff:normTime(r.cutoff),
+        awb:r.awb||'', qty:r.qty||'', dest:(r.dest||'').trim(),
+        ref:r.ref||'', details:r.details||'', doclink:r.doclink||'', note:r.note||''
+      }));
+      saveLocal(); renderBoard();
+    }
+  }catch(e){ setBanner('err','Could not reach Google Sheets.'); }
+}
+
+function pushToSheets(newJobs){
+  if(!gasUrl) return;
+  try{
+    // Strip base64 doc data before sending to Sheets (too large for URL)
+    const slim = newJobs.map(j=>{
+      const s={...j};
+      if(s.doclink && s.doclink.startsWith('data:')){
+        // Extract filename from encoded name field if present
+        const nameMatch = s.doclink.match(/;name:([^;]+);/);
+        const fname = nameMatch ? decodeURIComponent(nameMatch[1]) : 'document';
+        s.doclink = '[DOC:'+fname+']'; // placeholder in Sheets
+      }
+      return s;
+    });
+    const encoded = encodeURIComponent(JSON.stringify({action:'add',jobs:slim}));
+    if(encoded.length < 7000){
+      fetch(gasUrl+'?data='+encoded,{mode:'no-cors'});
+    } else {
+      // Still too large - send without doclink
+      const noDoc = slim.map(j=>({...j,doclink:'[DOC attached locally]'}));
+      fetch(gasUrl+'?data='+encodeURIComponent(JSON.stringify({action:'add',jobs:noDoc})),{mode:'no-cors'});
+    }
+  }catch(e){}
+}
+function deleteFromSheets(id){
+  if(!gasUrl) return;
+  try{ fetch(gasUrl+'?data='+encodeURIComponent(JSON.stringify({action:'delete',id})),{mode:'no-cors'}); }catch(e){}
+}
+async function refreshBoard(){
+  const s=document.getElementById('rspin'); s.style.display='inline-block';
+  await loadFromSheets(); s.style.display='none'; toast('Refreshed','info');
+}
+function saveLocal(){ try{localStorage.setItem('wh4-jobs',JSON.stringify(jobs));}catch(e){} }
+
+// ─── Tender batch ─────────────────────────────────────────────────
+function esc(s){ return String(s||'').replace(/"/g,'&quot;'); }
+function makeTRow(d={}){
+  const tr=document.createElement('tr');
+  tr.innerHTML=`
+    <td><input type="text" value="${esc(d.airline)}" placeholder="UA/AA/DL" style="width:62px"></td>
+    <td><input type="text" id="" placeholder="HH:MM" maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)" style="width:78px;font-family:var(--mono)"></td>
+    <td><input type="text" value="${esc(d.awb)}" placeholder="000-00000000" style="width:110px" oninput="cntTRows()"></td>
+    <td><input type="text" value="${esc(d.qty)}" placeholder="38 / 5T" style="width:50px"></td>
+    <td><input type="text" value="${esc(d.dest)}" placeholder="EWR" style="width:82px"></td>
+    <td><input type="text" value="${esc(d.note)}" placeholder="Note..." style="width:104px"></td>
+    <td style="text-align:center;white-space:nowrap">
+      <button class="btn ghost xs" onclick="dupeTRow(this)" title="Duplicate row">⧉</button>
+      <button class="btn ghost xs" onclick="this.closest('tr').remove();cntTRows()" style="color:var(--red)" title="Remove">✕</button>
+    </td>`;
+  return tr;
+}
+function addTRow(d={}){ document.getElementById('t-tbody').appendChild(makeTRow(d)); cntTRows(); }
+function dupeTRow(btn){
+  const ins=btn.closest('tr').querySelectorAll('input');
+  btn.closest('tr').after(makeTRow({airline:ins[0].value,cutoff:ins[1].value,awb:ins[2].value,qty:ins[3].value,dest:ins[4].value,note:ins[5].value}));
+  cntTRows();
+}
+function clearTRows(){ document.getElementById('t-tbody').innerHTML=''; cntTRows(); }
+function cntTRows(){ const n=document.getElementById('t-tbody').querySelectorAll('tr').length; document.getElementById('t-ctr').textContent=n+' row'+(n!==1?'s':''); }
+function resetTender(){
+  clearTRows();
+  ['t-comm','t-client'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('t-date').value=TODAY;
+  addTRow(); addTRow(); addTRow(); cntTRows();
+}
+
+async function submitTender(){
+  const date=document.getElementById('t-date').value||TODAY;
+  const comm=document.getElementById('t-comm').value.trim();
+  const client=document.getElementById('t-client').value.trim();
+  const rows=document.getElementById('t-tbody').querySelectorAll('tr');
+  const newJobs=[];
+  rows.forEach(tr=>{
+    const ins=tr.querySelectorAll('input');
+    const airline=ins[0].value.trim(),cutoff=ins[1].value,
+          awb=ins[2].value.trim(),qty=ins[3].value.trim(),dest=ins[4].value.trim(),note=ins[5].value.trim();
+    if(!awb&&!dest&&!airline) return;
+    newJobs.push({id:Date.now()+Math.random(),date,type:'tender',team:curTeam,
+      client,commodity:comm,airline,time:cutoff,cutoff,awb,qty,dest,ref:'',details:'',doclink:'',note});
+  });
+  if(!newJobs.length){ toast('Fill in at least one row.','err'); return; }
+  jobs=[...jobs,...newJobs]; saveLocal(); pushToSheets(newJobs);
+  toast(newJobs.length+' tender job'+(newJobs.length>1?'s':'')+' saved!','ok');
+  boardDate=date; resetTender(); goTab('board');
+}
+
+// ─── Single forms ─────────────────────────────────────────────────
+function gv(id){ const el=document.getElementById(id); return el?(el.value||'').trim():''; }
+
+function buildJob(type){
+  const base={id:Date.now()+Math.random(),type,team:curTeam,airline:'',cutoff:'',awb:'',doclink:''};
+  switch(type){
+    case 'delivery':  return {...base,date:gv('d-date')||TODAY,time:gv('d-time'),ref:gv('d-ref'),dest:gv('d-to'),qty:gv('d-qty'),client:gv('d-client'),commodity:gv('d-comm'),details:gv('d-details'),note:gv('d-note'),doclink:getDocLink('d')};
+    case 'pickup':    return {...base,date:gv('pu-date')||TODAY,time:gv('pu-time'),ref:gv('pu-ref'),dest:gv('pu-dest'),details:'From: '+gv('pu-from'),qty:gv('pu-qty'),commodity:gv('pu-comm'),client:gv('pu-client'),note:gv('pu-note'),doclink:getDocLink('pu')};
+    case 'receiving': return {...base,date:gv('rc-date')||TODAY,time:gv('rc-time'),ref:gv('rc-ref'),client:gv('rc-client'),details:'Carrier: '+gv('rc-carrier')+' | Consignee: '+gv('rc-consignee'),qty:gv('rc-qty'),commodity:gv('rc-comm'),doclink:gv('rc-docs'),note:gv('rc-note'),dest:''};
+    case 'releasing': return {...base,date:gv('rl-date')||TODAY,ref:gv('rl-ref'),client:gv('rl-client'),details:'Carrier: '+gv('rl-carrier')+' | Consignee: '+gv('rl-consignee'),qty:gv('rl-qty'),commodity:gv('rl-comm'),doclink:getDocLink('rl'),note:gv('rl-note'),time:'',dest:''};
+    case 'whjob':     return {...base,date:gv('wj-date')||TODAY,time:gv('wj-start'),ref:gv('wj-ref'),details:'Work: '+gv('wj-type')+' | End: '+gv('wj-end')+' | '+gv('wj-details'),qty:gv('wj-qty'),client:gv('wj-client'),commodity:gv('wj-comm'),note:gv('wj-note'),dest:''};
+    case 'loading':   return {...base,date:gv('lo-date')||TODAY,time:gv('lo-start'),ref:gv('lo-cont'),details:'Type: '+gv('lo-type')+' | '+gv('lo-ld')+' | '+gv('lo-details'),qty:gv('lo-qty'),client:gv('lo-client'),commodity:gv('lo-comm'),note:gv('lo-note'),dest:''};
+    case 'unloading': return {...base,date:gv('ul-date')||TODAY,time:gv('ul-start'),ref:gv('ul-cont'),details:'Type: '+gv('ul-type')+' | '+gv('ul-ld')+' | '+gv('ul-details'),qty:gv('ul-qty'),client:gv('ul-client'),commodity:gv('ul-comm'),note:gv('ul-note'),dest:''};
+    case 'other':     return {...base,date:gv('ot-date')||TODAY,time:gv('ot-time'),client:gv('ot-client'),details:gv('ot-desc'),qty:gv('ot-qty'),note:gv('ot-note'),ref:'',dest:'',commodity:''};
+    default: return {...base,date:TODAY};
+  }
+}
+
+const FORM_FIELDS = {
+  delivery:  ['d-date','d-ref','d-time','d-to','d-qty','d-client','d-comm','d-details','d-note'],
+  pickup:    ['pu-date','pu-ref','pu-time','pu-from','pu-dest','pu-qty','pu-comm','pu-client','pu-note'],
+  receiving: ['rc-date','rc-ref','rc-time','rc-carrier','rc-client','rc-consignee','rc-qty','rc-comm','rc-docs','rc-note'],
+  releasing: ['rl-date','rl-ref','rl-carrier','rl-client','rl-consignee','rl-qty','rl-comm','rl-note'],
+  whjob:     ['wj-date','wj-ref','wj-start','wj-end','wj-type','wj-qty','wj-client','wj-comm','wj-details','wj-note'],
+  loading:   ['lo-date','lo-cont','lo-start','lo-ld','lo-type','lo-qty','lo-client','lo-comm','lo-details','lo-note'],
+  unloading: ['ul-date','ul-cont','ul-start','ul-ld','ul-type','ul-qty','ul-client','ul-comm','ul-details','ul-note'],
+  other:     ['ot-date','ot-time','ot-client','ot-desc','ot-qty','ot-note'],
+};
+
+function resetForm(type){
+  (FORM_FIELDS[type]||[]).forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    if(el.tagName==='SELECT') el.selectedIndex=0;
+    else el.value = id.endsWith('-date') ? TODAY : '';
+  });
+  if(type==='releasing') clearDoc('rl');
+  if(type==='delivery') clearDoc('d');
+  if(type==='pickup') clearDoc('pu');
+}
+
+async function submitSingle(type){
+  const j=buildJob(type);
+  if(!j.date){ toast('Date is required.','err'); return; }
+  jobs=[...jobs,j]; saveLocal(); pushToSheets([j]);
+  toast(TYPE_LBL[type]||type+' job saved!','ok');
+  boardDate=j.date; resetForm(type); goTab('board');
+}
+
+// ─── Doc handling (multi-prefix: rl, d, pu) ───────────────────────
+const docStore = { rl:{base64:'',mime:'',name:''}, d:{base64:'',mime:'',name:''}, pu:{base64:'',mime:'',name:''} };
+
+document.addEventListener('paste', function(e){
+  if(!document.getElementById('panel-entry').classList.contains('on')) return;
+  const prefix = curJob==='releasing'?'rl':curJob==='delivery'?'d':curJob==='pickup'?'pu':null;
+  if(!prefix) return;
+  const items=e.clipboardData?.items;
+  if(!items) return;
+  for(const it of items){
+    if(it.type.startsWith('image/')){ handleDocFile(it.getAsFile(), prefix); break; }
+  }
+});
+
+function handleDocDrop(e, prefix){
+  e.preventDefault();
+  const dz=document.getElementById(prefix+'-drop-zone');
+  if(dz){ dz.style.borderColor=''; dz.style.background='var(--surface2)'; }
+  const f=e.dataTransfer.files[0];
+  if(f) handleDocFile(f, prefix);
+}
+
+function handleDocFile(file, prefix){
+  if(!file||!prefix) return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const dataUrl=ev.target.result;
+    docStore[prefix]={base64:dataUrl.split(',')[1], mime:file.type||'application/octet-stream', name:file.name||'document'};
+    const prev=document.getElementById(prefix+'-doc-preview');
+    if(prev){
+      prev.style.display='flex';
+      const icon=document.getElementById(prefix+'-doc-icon');
+      if(icon) icon.textContent=file.type==='application/pdf'?'📄':'🖼️';
+      const nm=document.getElementById(prefix+'-doc-name');
+      if(nm) nm.textContent=file.name||'document';
+      const sz=document.getElementById(prefix+'-doc-size');
+      if(sz) sz.textContent=formatBytes(file.size);
+    }
+    const imgPrev=document.getElementById(prefix+'-img-preview');
+    const imgEl=document.getElementById(prefix+'-img-el');
+    if(imgPrev&&imgEl){
+      if(file.type.startsWith('image/')){ imgEl.src=dataUrl; imgPrev.style.display='block'; }
+      else imgPrev.style.display='none';
+    }
+    toast('Document attached!','ok');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearDoc(prefix){
+  if(!prefix) return;
+  docStore[prefix]={base64:'',mime:'',name:''};
+  const prev=document.getElementById(prefix+'-doc-preview');
+  if(prev) prev.style.display='none';
+  const imgPrev=document.getElementById(prefix+'-img-preview');
+  if(imgPrev) imgPrev.style.display='none';
+  const inp=document.getElementById(prefix+'-file-inp');
+  if(inp) inp.value='';
+}
+
+function formatBytes(b){
+  if(b<1024) return b+'B';
+  if(b<1048576) return (b/1024).toFixed(1)+'KB';
+  return (b/1048576).toFixed(1)+'MB';
+}
+
+function getDocLink(prefix){
+  const d=docStore[prefix];
+  if(!d||!d.base64) return '';
+  return 'data:'+d.mime+';name:'+encodeURIComponent(d.name)+';base64,'+d.base64;
+}
+
+// ─── Board ────────────────────────────────────────────────────────
+const BANDS=['none','early','am','noon','pm','eve'];
+const BAND_LBL={none:'No time specified',early:'Before 9:00 AM',am:'9:00 – 12:00',noon:'12:00 – 15:00',pm:'15:00 – 18:00',eve:'After 18:00'};
+const TYPE_LBL={tender:'Tender',delivery:'Delivery',pickup:'Pick Up',receiving:'Receiving',releasing:'Releasing',whjob:'WH Job',loading:'Loading',unloading:'Unloading',other:'Other'};
+const TYPE_CLS={tender:'p-tender',delivery:'p-delivery',pickup:'p-pickup',receiving:'p-receiving',releasing:'p-releasing',whjob:'p-whjob',loading:'p-loading',unloading:'p-unloading',other:'p-other'};
+
+function band(j){
+  // Accept either a job object or a time string
+  const t = (typeof j === 'object') ? (j.cutoff||j.time||'') : (j||'');
+  if(!t) return 'none';
+  const parts=t.split(':');
+  if(parts.length<2) return 'none';
+  const h=parseInt(parts[0]);
+  if(isNaN(h)) return 'none';
+  if(h<9) return 'early'; if(h<12) return 'am'; if(h<15) return 'noon'; if(h<18) return 'pm'; return 'eve';
+}
+function shiftDate(d){ const dt=new Date(boardDate+'T00:00:00'); dt.setDate(dt.getDate()+d); boardDate=dt.toISOString().slice(0,10); renderBoard(); }
+function fmtDate(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}); }
+function fmtDateShort(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}); }
+function normDate(s){ if(!s) return ''; s=String(s).trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; try{ const d=new Date(s); if(!isNaN(d)) return d.toISOString().slice(0,10); }catch(e){} return s; }
+function normTime(s){ if(!s) return ''; s=String(s).trim(); if(/^\d{2}:\d{2}$/.test(s)) return s; if(/^\d:\d{2}$/.test(s)) return '0'+s; return s; }
+
+function renderBoard(){
+  document.getElementById('board-lbl').textContent=fmtDate(boardDate);
+  const ftm=document.getElementById('flt-team').value;
+  const fty=document.getElementById('flt-type').value;
+  const fde=document.getElementById('flt-dest').value;
+
+  let day=jobs.filter(j=>normDate(j.date)===boardDate);
+  const allDests=[...new Set(day.filter(j=>j.dest).map(j=>j.dest))].sort();
+  const fd=document.getElementById('flt-dest');
+  const cur=fd.value;
+  fd.innerHTML='<option value="">All Destinations</option>'+allDests.map(d=>`<option value="${d}"${d===cur?' selected':''}>${d}</option>`).join('');
+
+  if(ftm) day=day.filter(j=>j.team===ftm);
+  if(fty) day=day.filter(j=>j.type===fty);
+  if(fde) day=day.filter(j=>j.dest===fde);
+  day.sort((a,b)=>(a.cutoff||a.time||'99:99').localeCompare(b.cutoff||b.time||'99:99'));
+
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="stat-n">${day.length}</div><div class="stat-l">Total</div></div>
+    <div class="stat"><div class="stat-n">${day.filter(j=>j.dest).length}</div><div class="stat-l">Dispatch</div></div>
+    <div class="stat"><div class="stat-n">${day.filter(j=>!j.dest).length}</div><div class="stat-l">Warehouse</div></div>
+    <div class="stat"><div class="stat-n">${[...new Set(day.map(j=>j.team).filter(Boolean))].length}</div><div class="stat-l">Teams</div></div>
+    <div class="stat"><div class="stat-n">${[...new Set(day.map(j=>j.type).filter(Boolean))].length}</div><div class="stat-l">Job Types</div></div>`;
+
+  if(!day.length){
+    document.getElementById('board').innerHTML='<div class="empty-board">No jobs for this date.<p>Switch to Entry to add jobs, or click Refresh.</p></div>';
+    return;
+  }
+
+  const byBand={}; BANDS.forEach(b=>byBand[b]=[]);
+  day.forEach(j=>byBand[band(j)].push(j));
+
+  let boardHtml='';
+  BANDS.forEach(b=>{
+    const bj=byBand[b]; if(!bj.length) return;
+    boardHtml+=`<div class="tblock"><div class="bhead"><span class="tbadge tb-${b}">${BAND_LBL[b]}</span><span class="tline"></span><span class="tcnt">${bj.length} job${bj.length>1?'s':''}</span></div>`;
+    const dj=bj.filter(j=>j.dest), wj=bj.filter(j=>!j.dest);
+    if(dj.length){
+      const byD={}; dj.forEach(j=>{if(!byD[j.dest])byD[j.dest]=[];byD[j.dest].push(j);});
+      Object.entries(byD).sort().forEach(([dest,djs])=>{
+        boardHtml+=`<div class="dest-sec"><span class="dest-lbl">→ ${dest}</span><div class="jcards">`;
+        djs.forEach(j=>{ boardHtml+=cardHtml(j); });
+        boardHtml+=`</div></div>`;
+      });
+    }
+    if(wj.length){
+      boardHtml+=`<div class="wh-sec"><div class="jcards">`;
+      wj.forEach(j=>{ boardHtml+=cardHtml(j); });
+      boardHtml+=`</div></div>`;
+    }
+    boardHtml+=`</div>`;
+  });
+
+  if(!boardHtml){
+    boardHtml='<div class="tblock"><div class="bhead"><span class="tbadge tb-pm">All Jobs</span><span class="tline"></span></div><div class="wh-sec"><div class="jcards">';
+    day.forEach(j=>{ boardHtml+=cardHtml(j); });
+    boardHtml+='</div></div></div>';
+  }
+  document.getElementById('board').innerHTML=boardHtml;
+}
+
+function cardHtml(j){
+  const tc=TYPE_CLS[j.type]||'p-other', tl=TYPE_LBL[j.type]||j.type||'Other';
+  const isD=!!j.dest;
+  const docBtn=j.doclink?`<button onclick="viewDoc('${j.id}')" class="doc-link">📄 Doc</button>`:'';
+  const releaseBtn=j.type==='releasing'?`<button onclick="openReleaseLetter('${j.id}')" class="doc-link" style="background:var(--purple-lt);color:var(--purple)">📋 Release Letter</button>`:'';
+  return `<div class="jcard ${isD?'dispatch':'whouse'}">
+    <div class="jbody">
+      <div class="jr1">
+        <span class="pill ${tc}">${tl}</span>
+        ${j.airline?`<span class="pill p-team">${j.airline}</span>`:''}
+        ${j.team?`<span class="pill p-team">T-${j.team}</span>`:''}
+        ${j.cutoff?`<span class="pill p-cut">CUT ${j.cutoff}</span>`:''}
+        ${docBtn}
+        ${releaseBtn}
+      </div>
+      <div class="jr2">
+        ${j.client?`<div class="jfield"><strong>${j.client}</strong></div>`:''}
+        ${j.dest?`<div class="jfield">→ <strong>${j.dest}</strong></div>`:''}
+        ${j.commodity?`<div class="jfield">${j.commodity}${j.qty?' × <strong>'+j.qty+'</strong>':''}</div>`:''}
+        ${j.awb?`<div class="awb-txt">AWB: ${j.awb}</div>`:''}
+        ${j.ref&&!j.awb?`<div class="awb-txt">Ref: ${j.ref}</div>`:''}
+      </div>
+      ${j.details?`<div class="jfield" style="font-size:11px;margin-top:3px;color:var(--ink3)">${j.details}</div>`:''}
+      ${j.note?`<div class="jnote">${j.note}</div>`:''}
+    </div>
+    <div class="jtime">${j.cutoff?'CUT '+j.cutoff:j.time||'—'}</div>
+    <div class="jdel" style="display:flex;flex-direction:column;gap:4px">
+      <button class="btn xs" onclick="openEdit('${j.id}')">Edit</button>
+      <button class="btn xs danger" onclick="deleteJob('${j.id}')">Remove</button>
+    </div>
+  </div>`;
+}
+
+// ─── Release Letter ───────────────────────────────────────────────
+function generateReleaseLetter(){
+  // Build a temporary job object from the current form
+  const j = buildJob('releasing');
+  if(!j.date){ toast('Please fill in Date first.','err'); return; }
+  // Save temporarily with a temp ID if not yet submitted
+  const tempId = 'rl-preview-'+Date.now();
+  j.id = tempId;
+  // Store in localStorage for the release page
+  let jobs2 = [];
+  try{ jobs2 = JSON.parse(localStorage.getItem('wh4-jobs')||'[]'); }catch(e){}
+  // Remove old preview
+  jobs2 = jobs2.filter(x=>!String(x.id).startsWith('rl-preview-'));
+  jobs2.push(j);
+  try{ localStorage.setItem('wh4-jobs', JSON.stringify(jobs2)); }catch(e){}
+  // Open release letter page
+  window.open('WH-Release-Sign.html?job='+tempId, '_blank');
+}
+
+function openReleaseLetter(id){
+  window.open('WH-Release-Sign.html?job='+id, '_blank');
+}
+
+async function deleteJob(id){
+  if(!confirm('Remove this job?')) return;
+  jobs=jobs.filter(j=>String(j.id)!==String(id));
+  saveLocal(); deleteFromSheets(id); renderBoard();
+}
+
+// ─── Doc viewer ───────────────────────────────────────────────────
+function viewDoc(id){
+  const j=jobs.find(x=>String(x.id)===String(id));
+  if(!j||!j.doclink) return;
+  const w=window.open('','_blank','width=900,height=700');
+  if(j.doclink.startsWith('data:application/pdf')){
+    // PDF viewer
+    const base64=j.doclink.split('base64,')[1];
+    w.document.write('<html><body style="margin:0"><embed src="'+j.doclink.split(';name:')[0].replace('data:','data:')+';base64,'+base64+'" type="application/pdf" width="100%" height="100%"></embed></body></html>');
+  } else if(j.doclink.startsWith('data:image')){
+    // Image viewer
+    const src=j.doclink.split(';name:')[0]+';base64,'+j.doclink.split('base64,')[1];
+    w.document.write('<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="'+src+'" style="max-width:100%;max-height:100vh;object-fit:contain"></body></html>');
+  } else {
+    w.location=j.doclink;
+  }
+}
+
+// ─── Edit modal ───────────────────────────────────────────────────
+let editingId = null;
+
+function openEdit(id){
+  const j = jobs.find(x=>String(x.id)===String(id));
+  if(!j) return;
+  editingId = String(id);
+  const TYPE_LBL2 = {tender:'Tender',delivery:'Delivery',pickup:'Pick Up',receiving:'Receiving',releasing:'Releasing',whjob:'WH Job',loading:'Loading',unloading:'Unloading',other:'Other'};
+  document.getElementById('edit-modal-title').textContent = 'Edit — '+(TYPE_LBL2[j.type]||j.type||'Job');
+  document.getElementById('edit-modal-body').innerHTML = buildEditForm(j);
+  document.getElementById('edit-overlay').classList.add('show');
+}
+
+function buildEditForm(j){
+  const f = (id,label,val,type='text',placeholder='')=>`
+    <div class="field">
+      <label>${label}</label>
+      <input type="${type}" id="ef-${id}" value="${esc(val||'')}" placeholder="${placeholder}" ${type==='text'&&(id==='time'||id==='cutoff')?'maxlength="5" oninput="fmtTime(this)" onblur="validateTime(this)"':''}>
+    </div>`;
+  const sel = (id,label,val,opts)=>`
+    <div class="field">
+      <label>${label}</label>
+      <select id="ef-${id}">
+        ${opts.map(o=>`<option value="${o}" ${o===val?'selected':''}>${o||'— none —'}</option>`).join('')}
+      </select>
+    </div>`;
+
+  return `
+    <div class="edit-section">Core fields</div>
+    <div class="edit-grid eg4">
+      ${f('date','Date',j.date,'text')}
+      ${f('time','Time (24h)',j.time,'text','HH:MM')}
+      ${f('cutoff','Cut-off (24h)',j.cutoff,'text','HH:MM')}
+      ${sel('team','Team',j.team,['','A','B','C','D','E'])}
+    </div>
+    <div class="edit-section">Job details</div>
+    <div class="edit-grid eg3">
+      ${f('client','Client',j.client,'text','Client name')}
+      ${f('commodity','Commodity',j.commodity,'text','e.g. TUNA')}
+      ${f('qty','Qty',j.qty,'text','10cs / 2plt')}
+    </div>
+    <div class="edit-grid eg3">
+      ${f('dest','Destination',j.dest,'text','e.g. EWR, LAX')}
+      ${f('airline','Airline',j.airline,'text','UA/AA/DL')}
+      ${f('awb','AWB #',j.awb,'text','000-00000000')}
+    </div>
+    <div class="edit-grid eg2">
+      ${f('ref','Ref #',j.ref,'text','REF-001')}
+      ${f('details','Details',j.details,'text','Additional details')}
+    </div>
+    <div class="edit-section">Note</div>
+    <div class="field">
+      <textarea id="ef-note" style="min-height:64px;width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--sans);font-size:12px;resize:vertical">${esc(j.note||'')}</textarea>
+    </div>`;
+}
+
+function closeEdit(){
+  document.getElementById('edit-overlay').classList.remove('show');
+  editingId = null;
+}
+
+function closeEditIfOutside(e){
+  if(e.target===document.getElementById('edit-overlay')) closeEdit();
+}
+
+function saveEdit(){
+  if(!editingId) return;
+  const idx = jobs.findIndex(x=>String(x.id)===editingId);
+  if(idx===-1) return;
+  const gef = id=>{ const el=document.getElementById('ef-'+id); return el?(el.value||'').trim():''; };
+  jobs[idx] = {
+    ...jobs[idx],
+    date:   gef('date'),
+    time:   gef('time'),
+    cutoff: gef('cutoff'),
+    team:   gef('team'),
+    client: gef('client'),
+    commodity: gef('commodity'),
+    qty:    gef('qty'),
+    dest:   gef('dest'),
+    airline:gef('airline'),
+    awb:    gef('awb'),
+    ref:    gef('ref'),
+    details:gef('details'),
+    note:   gef('note'),
+  };
+  saveLocal();
+  // Push update to Sheets: delete old + add new (base64 stripped in pushToSheets)
+  deleteFromSheets(editingId);
+  setTimeout(()=>pushToSheets([jobs[idx]]), 300);
+  closeEdit();
+  renderBoard();
+  toast('Job updated!','ok');
+}
+
+function deleteFromEdit(){
+  if(!editingId) return;
+  if(!confirm('Delete this job?')) return;
+  jobs = jobs.filter(j=>String(j.id)!==editingId);
+  saveLocal();
+  deleteFromSheets(editingId);
+  closeEdit();
+  renderBoard();
+  toast('Job deleted.','info');
+}
+
+// ─── Time input helpers (24h text format) ─────────────────────────
+function fmtTime(el){
+  let v=el.value.replace(/[^0-9:]/g,'');
+  // Auto-insert colon after 2 digits
+  if(v.length===2&&!v.includes(':')&&el._prev&&el._prev.length<2) v=v+':';
+  el._prev=v;
+  el.value=v;
+}
+function validateTime(el){
+  const v=el.value.trim();
+  if(!v){el.style.borderColor='';return;}
+  const m=v.match(/^(\d{1,2}):?(\d{2})$/);
+  if(!m){el.style.borderColor='var(--red)';el.title='Use 24h format: HH:MM (e.g. 20:00)';return;}
+  const h=parseInt(m[1]),min=parseInt(m[2]);
+  if(h>23||min>59){el.style.borderColor='var(--red)';el.title='Invalid time';return;}
+  el.style.borderColor='';el.title='';
+  el.value=(h<10?'0':'')+h+':'+m[2];
+}
+
+function toast(msg,type='info'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show '+type;
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),3000);
+}
+</script>
+</body>
+</html>
