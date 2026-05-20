@@ -970,6 +970,13 @@ function printReleaseLabel(){
   const j = buildJob('releasing');
   if(!j.date){ toast('Please fill in Date first.','err'); return; }
 
+  // Get or create jobId for this release
+  const jobId = (function(){
+    let jobs2 = [];
+    try{ jobs2 = JSON.parse(localStorage.getItem('wh4-jobs')||'[]'); }catch(e){}
+    const preview = jobs2.find(x=>String(x.id).startsWith('rl-preview-'));
+    return preview ? String(preview.id) : 'rl-'+Date.now();
+  })();
   const ref   = gv('rl-ref')   || '—';
   const client= gv('rl-client')|| '—';
   const carrier=gv('rl-carrier')|| '—';
@@ -979,27 +986,14 @@ function printReleaseLabel(){
   const date  = gv('rl-date')  || j.date;
   const team  = curTeam;
 
-  // Build barcode SVG using simple bar pattern from ref#
-  function makeBarcode(text){
-    const chars = text.split('');
-    let bars = '';
-    let x = 0;
-    const h = 40;
-    // Simple visual barcode (Code39 style approximation)
-    const narrow = 2, wide = 5, gap = 2;
-    chars.forEach((c,ci)=>{
-      const code = c.charCodeAt(0);
-      for(let b=0;b<7;b++){
-        const w = (code >> b & 1) ? wide : narrow;
-        if(b%2===0) bars += `<rect x="${x}" y="0" width="${w}" height="${h}" fill="#1A1916"/>`;
-        x += w + gap;
-      }
-      x += 6;
-    });
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${x}" height="${h+16}" style="display:block">
-      ${bars}
-      <text x="${x/2}" y="${h+12}" text-anchor="middle" font-family="monospace" font-size="10" fill="#1A1916">${text}</text>
-    </svg>`;
+  // Build QR code for label verification
+  const DEPLOY_URL = 'https://wh-scheduler.onrender.com';
+
+  function makeBarcode(ref){
+    // Returns a div with QR code generated via Google Charts API (no JS lib needed)
+    const verifyUrl = DEPLOY_URL + '/WH-Release-Sign.html?mode=verify&ref=' + encodeURIComponent(ref) + '&job=' + encodeURIComponent(jobId||'');
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + encodeURIComponent(verifyUrl);
+    return '<img src="' + qrUrl + '" width="120" height="120" style="display:block" alt="QR ' + ref + '">';
   }
 
   const labelHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Release Label - ${ref}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#fff}@page{size:letter;margin:12mm}.np{text-align:center;padding:12px;background:#f5f5f5;border-bottom:1px solid #ddd}.label{width:100%;border:3px solid #1A1916;border-radius:6px;padding:20px 24px;display:flex;flex-direction:column;background:#fff;min-height:220mm}.lh{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #1A1916;padding-bottom:14px;margin-bottom:16px}.logo{font-size:36px;font-weight:900;color:#E8501A;line-height:1}.tblock{text-align:right}.tmain{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.tsub{font-size:12px;color:#5C5A54;margin-top:3px;font-family:monospace}.rbox{background:#1A1916;color:#fff;border-radius:4px;padding:14px 20px;margin-bottom:20px}.rlbl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:4px}.rval{font-size:52px;font-weight:700;font-family:monospace;letter-spacing:.04em;line-height:1}.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;margin-bottom:20px}.field{border-bottom:1px solid #D4D0C4;padding-bottom:10px}.fk{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#9C9A94;margin-bottom:5px}.fv{font-size:26px;font-weight:600;color:#1A1916;line-height:1.2}.bsec{margin-top:auto;padding-top:16px;border-top:1px solid #D4D0C4;display:flex;flex-direction:column;align-items:center}.blbl{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#9C9A94;margin-bottom:8px}@media print{.np{display:none}}</style></head><body><div class="np"><button onclick="window.print()" style="padding:9px 22px;background:#1A1916;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px;font-weight:600">Print Label</button><button onclick="window.close()" style="padding:9px 18px;background:#eee;border:none;border-radius:4px;cursor:pointer;font-size:13px;margin-left:8px">Close</button></div><div class="label"><div class="lh"><div style="display:flex;align-items:center;gap:12px"><div class="logo">NAX</div><div><div style="font-size:14px;font-weight:600">NAX USA Logistics</div><div style="font-size:12px;color:#5C5A54">Warehouse &amp; Freight Services</div></div></div><div class="tblock"><div class="tmain">Cargo Release Label</div><div class="tsub">Team ${team} &middot; ${date}</div></div></div><div class="rbox"><div class="rlbl">Reference Number</div><div class="rval">${ref}</div></div><div class="fields"><div class="field"><div class="fk">Client</div><div class="fv">${client}</div></div><div class="field"><div class="fk">Carrier</div><div class="fv">${carrier}</div></div><div class="field"><div class="fk">Commodity</div><div class="fv">${comm}</div></div><div class="field"><div class="fk">Quantity</div><div class="fv">${qty}</div></div><div class="field" style="grid-column:span 2"><div class="fk">Consignee</div><div class="fv" style="font-size:20px">${consignee}</div></div></div><div class="bsec"><div class="blbl">Scan to verify - matches Release Letter Ref #</div>${makeBarcode(ref)}</div></div></body></html>`;
