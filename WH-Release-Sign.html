@@ -124,6 +124,19 @@ canvas#sign-canvas{display:block;width:100%;touch-action:none}
   .screen{display:block!important}
   #screen-sign{display:none!important}
 }
+
+/* Verify screen */
+.verify-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#fff}
+.verify-ok{background:#0A6644;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.verify-err{background:#9B1C1C;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.verify-card{background:#fff;border-radius:12px;padding:32px 28px;text-align:center;width:100%;max-width:380px}
+.verify-icon{font-size:64px;margin-bottom:16px}
+.verify-title{font-size:24px;font-weight:700;margin-bottom:8px}
+.verify-sub{font-size:15px;line-height:1.6;margin-bottom:20px}
+.verify-ref{font-size:13px;font-family:monospace;background:#f5f5f5;padding:8px 14px;border-radius:6px;margin-bottom:16px;word-break:break-all}
+.verify-btn{width:100%;padding:14px;font-size:15px;font-weight:600;border:none;border-radius:8px;cursor:pointer;font-family:var(--sans)}
+.verify-ok .verify-title{color:#0A6644}
+.verify-err .verify-title{color:#9B1C1C}
 </style>
 </head>
 <body>
@@ -272,6 +285,32 @@ canvas#sign-canvas{display:block;width:100%;touch-action:none}
   </div>
 </div>
 
+<!-- VERIFY OK -->
+<div class="screen" id="screen-verify-ok">
+  <div class="verify-ok">
+    <div class="verify-card">
+      <div class="verify-icon">✅</div>
+      <div class="verify-title">Cargo Verified</div>
+      <div class="verify-sub">This label matches the Release Letter. Cargo is cleared for release.</div>
+      <div class="verify-ref" id="v-ok-ref"></div>
+      <div style="font-size:13px;color:#5C5A54" id="v-ok-detail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- VERIFY ERROR -->
+<div class="screen" id="screen-verify-err">
+  <div class="verify-err">
+    <div class="verify-card">
+      <div class="verify-icon">🚨</div>
+      <div class="verify-title" style="color:#9B1C1C">WRONG CARGO</div>
+      <div class="verify-sub" style="color:#5C5A54">This label does NOT match the Release Letter. Do not release this cargo.</div>
+      <div class="verify-ref" id="v-err-detail"></div>
+      <button class="verify-btn" style="background:#9B1C1C;color:#fff;margin-top:8px" onclick="history.back()">← Go Back</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let jobData = null;
 let isSigned = false;
@@ -299,7 +338,12 @@ let isDrawing = false, lastX = 0, lastY = 0, ctx = null;
     }
   }
 
-  if(mode === 'sign'){
+  if(mode === 'verify'){
+    // Verify label scan against release letter
+    const labelRef = params.get('ref') || '';
+    const releaseJobId = params.get('job') || '';
+    handleVerify(labelRef, releaseJobId, jobs);
+  } else if(mode === 'sign'){
     showScreen('sign');
     populateSign();
     setTimeout(initCanvas, 150);
@@ -358,12 +402,58 @@ function populateSign(){
 
 function generateQR(jobId){
   if(!jobId) return;
-  const signUrl = window.location.href.split('?')[0]+'?job='+jobId+'&mode=sign';
+  const signUrl = 'https://wh-scheduler.onrender.com/WH-Release-Sign.html?job='+jobId+'&mode=sign';
   const el = document.getElementById('qr-code-display');
   el.innerHTML = '';
   try{
     new QRCode(el,{text:signUrl,width:90,height:90,colorDark:'#1A1916',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
   }catch(e){ el.innerHTML='<div style="font-size:9px;color:#999;padding:4px">QR N/A</div>'; }
+}
+
+function handleVerify(labelRef, releaseJobId, jobs){
+  // Find the release job
+  let releaseJob = null;
+  if(releaseJobId){
+    releaseJob = jobs.find(j=>String(j.id)===String(releaseJobId));
+  }
+  // Also try to find by ref if no jobId match
+  if(!releaseJob && labelRef){
+    releaseJob = jobs.find(j=>j.type==='releasing' && j.ref===labelRef);
+  }
+
+  const expectedRef = releaseJob ? (releaseJob.ref || '') : '';
+
+  if(!labelRef){
+    // No ref in QR - show error
+    showScreen('screen-verify-err'.replace('screen-',''));
+    document.getElementById('v-err-detail').textContent = 'Invalid QR code — no reference number found.';
+    return;
+  }
+
+  if(!releaseJob){
+    // No matching release job found
+    document.getElementById('v-err-detail').innerHTML =
+      '<strong>Scanned Ref:</strong> ' + labelRef + '<br><br>No matching Release Letter found in this device. Make sure you are using the same device that generated the Release Letter.';
+    showScreen('verify-err');
+    return;
+  }
+
+  if(labelRef === expectedRef || labelRef === releaseJob.ref){
+    // MATCH
+    document.getElementById('v-ok-ref').textContent = 'Ref # ' + labelRef;
+    document.getElementById('v-ok-detail').innerHTML =
+      'Client: ' + (releaseJob.client||'—') + '<br>' +
+      'Commodity: ' + (releaseJob.commodity||'—') + '<br>' +
+      'Qty: ' + (releaseJob.qty||'—');
+    showScreen('verify-ok');
+  } else {
+    // MISMATCH
+    document.getElementById('v-err-detail').innerHTML =
+      '<strong>Label Ref:</strong> ' + labelRef + '<br>' +
+      '<strong>Expected Ref:</strong> ' + expectedRef + '<br><br>' +
+      'These do not match. Check the cargo immediately.';
+    showScreen('verify-err');
+  }
 }
 
 function showGetSignInfo(){
