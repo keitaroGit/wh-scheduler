@@ -378,11 +378,32 @@ table.tt input:focus,table.tt select:focus{outline:none;border-color:var(--blue)
 
 
 
-      <div class="sub-bar">
-        <button class="btn" style="background:var(--purple-lt);color:var(--purple);border-color:var(--purple)" onclick="generateReleaseLetter()">📄 Generate Release Letter</button>
-        <div class="sp"></div>
-        <button class="btn" onclick="resetForm('releasing')">Reset</button>
-        <button class="btn prim" onclick="submitSingle('releasing')">Submit →</button>
+      <div style="margin-top:12px;padding:14px;background:var(--surface2);border-radius:var(--r-lg);border:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px">Actions — complete in order</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <button class="btn" style="background:var(--purple-lt);color:var(--purple);border-color:var(--purple);min-width:180px;justify-content:center" onclick="generateReleaseLetter()">
+              <span>📄</span> Generate Release Letter
+            </button>
+            <span style="font-size:10px;color:var(--ink3)">Step 1</span>
+          </div>
+          <div style="color:var(--ink3);font-size:16px;margin:0 4px">→</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <button class="btn" style="background:var(--blue-lt);color:var(--blue-dk);border-color:var(--blue);min-width:160px;justify-content:center" onclick="printReleaseLabel()">
+              <span>🏷️</span> Print Label
+            </button>
+            <span style="font-size:10px;color:var(--ink3)">Step 2</span>
+          </div>
+          <div style="color:var(--ink3);font-size:16px;margin:0 4px">→</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <button class="btn prim" style="min-width:120px;justify-content:center" onclick="submitSingle('releasing')">
+              <span>✓</span> Submit
+            </button>
+            <span style="font-size:10px;color:var(--ink3)">Step 3</span>
+          </div>
+          <div class="sp" style="flex:1"></div>
+          <button class="btn" onclick="resetForm('releasing')" style="color:var(--ink2)">Reset</button>
+        </div>
       </div>
     </div>
   </div>
@@ -945,6 +966,49 @@ function cardHtml(j){
 }
 
 // ─── Release Letter ───────────────────────────────────────────────
+function printReleaseLabel(){
+  const j = buildJob('releasing');
+  if(!j.date){ toast('Please fill in Date first.','err'); return; }
+
+  const ref   = gv('rl-ref')   || '—';
+  const client= gv('rl-client')|| '—';
+  const carrier=gv('rl-carrier')|| '—';
+  const consignee=gv('rl-consignee')|| '—';
+  const comm  = gv('rl-comm')  || '—';
+  const qty   = gv('rl-qty')   || '—';
+  const date  = gv('rl-date')  || j.date;
+  const team  = curTeam;
+
+  // Build barcode SVG using simple bar pattern from ref#
+  function makeBarcode(text){
+    const chars = text.split('');
+    let bars = '';
+    let x = 0;
+    const h = 40;
+    // Simple visual barcode (Code39 style approximation)
+    const narrow = 2, wide = 5, gap = 2;
+    chars.forEach((c,ci)=>{
+      const code = c.charCodeAt(0);
+      for(let b=0;b<7;b++){
+        const w = (code >> b & 1) ? wide : narrow;
+        if(b%2===0) bars += `<rect x="${x}" y="0" width="${w}" height="${h}" fill="#1A1916"/>`;
+        x += w + gap;
+      }
+      x += 6;
+    });
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${x}" height="${h+16}" style="display:block">
+      ${bars}
+      <text x="${x/2}" y="${h+12}" text-anchor="middle" font-family="monospace" font-size="10" fill="#1A1916">${text}</text>
+    </svg>`;
+  }
+
+  const labelHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Release Label - ${ref}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#fff}@page{size:letter;margin:12mm}.np{text-align:center;padding:12px;background:#f5f5f5;border-bottom:1px solid #ddd}.label{width:100%;border:3px solid #1A1916;border-radius:6px;padding:20px 24px;display:flex;flex-direction:column;background:#fff;min-height:220mm}.lh{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #1A1916;padding-bottom:14px;margin-bottom:16px}.logo{font-size:36px;font-weight:900;color:#E8501A;line-height:1}.tblock{text-align:right}.tmain{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.tsub{font-size:12px;color:#5C5A54;margin-top:3px;font-family:monospace}.rbox{background:#1A1916;color:#fff;border-radius:4px;padding:14px 20px;margin-bottom:20px}.rlbl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:4px}.rval{font-size:52px;font-weight:700;font-family:monospace;letter-spacing:.04em;line-height:1}.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;margin-bottom:20px}.field{border-bottom:1px solid #D4D0C4;padding-bottom:10px}.fk{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#9C9A94;margin-bottom:5px}.fv{font-size:26px;font-weight:600;color:#1A1916;line-height:1.2}.bsec{margin-top:auto;padding-top:16px;border-top:1px solid #D4D0C4;display:flex;flex-direction:column;align-items:center}.blbl{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#9C9A94;margin-bottom:8px}@media print{.np{display:none}}</style></head><body><div class="np"><button onclick="window.print()" style="padding:9px 22px;background:#1A1916;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px;font-weight:600">Print Label</button><button onclick="window.close()" style="padding:9px 18px;background:#eee;border:none;border-radius:4px;cursor:pointer;font-size:13px;margin-left:8px">Close</button></div><div class="label"><div class="lh"><div style="display:flex;align-items:center;gap:12px"><div class="logo">NAX</div><div><div style="font-size:14px;font-weight:600">NAX USA Logistics</div><div style="font-size:12px;color:#5C5A54">Warehouse &amp; Freight Services</div></div></div><div class="tblock"><div class="tmain">Cargo Release Label</div><div class="tsub">Team ${team} &middot; ${date}</div></div></div><div class="rbox"><div class="rlbl">Reference Number</div><div class="rval">${ref}</div></div><div class="fields"><div class="field"><div class="fk">Client</div><div class="fv">${client}</div></div><div class="field"><div class="fk">Carrier</div><div class="fv">${carrier}</div></div><div class="field"><div class="fk">Commodity</div><div class="fv">${comm}</div></div><div class="field"><div class="fk">Quantity</div><div class="fv">${qty}</div></div><div class="field" style="grid-column:span 2"><div class="fk">Consignee</div><div class="fv" style="font-size:20px">${consignee}</div></div></div><div class="bsec"><div class="blbl">Scan to verify - matches Release Letter Ref #</div>${makeBarcode(ref)}</div></div></body></html>`;
+
+  const w = window.open('','_blank','width=900,height=700');
+  w.document.write(labelHtml);
+  w.document.close();
+}
+
 function generateReleaseLetter(){
   // Build a temporary job object from the current form
   const j = buildJob('releasing');
